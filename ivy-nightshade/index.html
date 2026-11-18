@@ -25,7 +25,7 @@ window.G.CFG = {
   // chandelier / crouch
   CROUCH_H: 32, CHANDELIER_AMP_DEG: 22, CHANDELIER_CLEAR: 36,
   // caught sequence (seconds)
-  CAUGHT_FREEZE: 3.5, CAUGHT_FALL: 0.8, SPIDER_DESCEND: 1.4, DRAG_SPEED: 110, DRAG_MAX: 5, GETUP_TIME: 2.4, TRAP_OFF_DELAY: 0.7, RUN_BACK_SPEED: 210,
+  CAUGHT_FREEZE: 3.5, CAUGHT_FALL: 0.8, SPIDER_DESCEND: 1.4, DRAG_SPEED: 110, DRAG_MAX: 5, GETUP_TIME: 2.4, TRAP_OFF_DELAY: 0.7, DEATH_FX_T: 1.1, RUN_BACK_SPEED: 210,
   PAL: {
     plum: '#241f2e', plumDeep: '#17131e', plumLight: '#3a3247', bordeaux: '#6b2e3e', bordeauxLight: '#8e4256',
     moon: '#c9cfe0', moonDim: '#8d93a8', skin: '#f2ece4', ink: '#141018', amber: '#f3a03a', amberLight: '#f7c873',
@@ -4551,13 +4551,9 @@ window.G.CFG = {
       this.cs.drag = U.clamp(this.cs.len / CFG.DRAG_SPEED, 1.2, CFG.DRAG_MAX);
       this.cs.run = U.clamp(this.cs.len / CFG.RUN_BACK_SPEED, 1.2, 8);
       const c = this.cs;
+      c.trap = d.kind;
       if (c.kind === 'run') { c.t4 = c.t1 + c.run; c.t5 = c.t4; }
-      else {
-        c.t2 = c.t1 + CFG.CAUGHT_FALL;          // fallen
-        c.t3 = c.t2 + CFG.SPIDER_DESCEND;       // spider arrived
-        c.t4 = c.t3 + c.drag;                   // dragged to checkpoint
-        c.t5 = c.t4 + CFG.GETUP_TIME;           // up again
-      }
+      else { c.landed = false; c.t1 = Infinity; } // death: first drop to the ground, then the death effect, then lie down
       c.ivy = { x: p.x, y: p.y, state: 'frozen', k: 0, drag: false, facing: p.facing };
       c.spider = null;
     }
@@ -4568,6 +4564,23 @@ window.G.CFG = {
       const headX = () => ivy.x + c.dir * 24;
       if (!this.traps.paused) { // after a trap death the trap finishes its move, then switches off
         if (tt < CFG.TRAP_OFF_DELAY) this.traps.update(dt); else this.traps.paused = true;
+      }
+      if (c.kind === 'death' && !c.landed) { // killed in mid-air: fall until she lands on something
+        p.update(dt); ivy.x = p.x; ivy.y = p.y; ivy.state = p.onGround ? 'frozen' : 'fall'; ivy.facing = p.facing;
+        if (p.onGround || tt > 2 || p.y > this.world.hpx) {
+          c.landed = true; p.vx = 0; p.vy = 0;
+          const cp = this.stealth.checkpoint;
+          this.buildPath(c, p, cp);
+          c.drag = U.clamp(c.len / CFG.DRAG_SPEED, 1.2, CFG.DRAG_MAX);
+          c.fx0 = tt;
+          c.t1 = tt + CFG.DEATH_FX_T;             // death effect (shock, green gas, bonk...)
+          c.t2 = c.t1 + CFG.CAUGHT_FALL;          // lies down
+          c.t3 = c.t2 + CFG.SPIDER_DESCEND;       // spider arrived
+          c.t4 = c.t3 + c.drag;                   // dragged to checkpoint
+          c.t5 = c.t4 + CFG.GETUP_TIME;           // up again
+          if (c.trap === 'spark') sfx('spark'); else if (c.trap === 'flask') sfx('flask'); else sfx('land');
+        }
+        return;
       }
       if (tt < c.t1) { ivy.state = 'frozen'; p.state = 'frozen'; return; }
       if (c.kind === 'run' && tt < c.t4) { // comic dash back to the hiding spot
@@ -4702,12 +4715,67 @@ window.G.CFG = {
       ctx.restore();
     }
 
+    // Ivy during a death, with a little effect per trap: shock (shake + lightning), gas (turns green), bonk/bite (dizzy stars)
+    drawDeathIvy(ctx, c, ivy, opts) {
+      const A = G.art, tt = this.tt;
+      const fxK = c.fx0 == null ? 0 : U.clamp((tt - c.fx0) / CFG.DEATH_FX_T, 0, 1); // 0..1 during the effect
+      const inFx = c.landed && tt < c.t1;
+      let x = ivy.x, y = ivy.y;
+      if (inFx && (c.trap === 'spark' || c.trap === 'plant')) { x += (Math.random() - 0.5) * 5; y += (Math.random() - 0.5) * 2; }
+      // green tint for gas: grows during the effect, slowly fades while she is carried back
+      let green = 0;
+      if (c.trap === 'flask') green = !c.landed ? 0.2 : tt < c.t1 ? 0.2 + 0.4 * fxK : U.clamp(0.6 - (tt - c.t1) * 0.12, 0, 0.6);
+      let flash = inFx && c.trap === 'spark' ? (Math.sin(tt * 40) > 0.3 ? 0.42 : 0.1) : 0;
+      if (green > 0.01 || flash > 0.01) {
+        const o = this._fxCanvas || (this._fxCanvas = document.createElement('canvas'));
+        o.width = 160; o.height = 140;
+        const oc = o.getContext('2d');
+        oc.clearRect(0, 0, 160, 140);
+        A.drawIvy(oc, 80, 120, opts);
+        oc.globalCompositeOperation = 'source-atop';
+        if (green > 0) { oc.fillStyle = 'rgba(120,210,70,' + green.toFixed(2) + ')'; oc.fillRect(0, 0, 160, 140); }
+        if (flash > 0) { oc.fillStyle = 'rgba(200,235,255,' + flash.toFixed(2) + ')'; oc.fillRect(0, 0, 160, 140); }
+        oc.globalCompositeOperation = 'source-over';
+        ctx.drawImage(o, x - 80, y - 120);
+      } else A.drawIvy(ctx, x, y, opts);
+      if (!inFx) return;
+      const top = y - 50;
+      ctx.save();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      if (c.trap === 'spark') { // lightning zig-zags crawling over her
+        for (let k = 0; k < 3; k++) {
+          let px = x + U.rand(-16, 16), py = top + U.rand(-6, 6);
+          ctx.beginPath(); ctx.moveTo(px, py);
+          for (let i = 0; i < 5; i++) { px += U.rand(-10, 10); py += U.rand(6, 12); ctx.lineTo(px, py); }
+          ctx.strokeStyle = 'rgba(150,215,255,0.9)'; ctx.lineWidth = 3.2; ctx.stroke();
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2; ctx.stroke();
+        }
+      } else if (c.trap === 'flask') { // green bubbles drifting up
+        for (let k = 0; k < 6; k++) {
+          const ph = (tt * 0.9 + k / 6) % 1;
+          ctx.globalAlpha = 1 - ph;
+          ctx.fillStyle = '#9bd35a';
+          ctx.beginPath(); ctx.arc(x + Math.sin(k * 2.3 + tt * 3) * 14, top + 10 - ph * 40, 2.5 + (k % 3), 0, Math.PI * 2); ctx.fill();
+        }
+      } else { // chandelier bonk / plant bite: dizzy stars around her head
+        for (let k = 0; k < 3; k++) {
+          const a = tt * 5 + (k * Math.PI * 2) / 3;
+          const sx = x + Math.cos(a) * 16, sy = top - 4 + Math.sin(a) * 5;
+          ctx.fillStyle = '#f7c873';
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) { const r = i % 2 ? 2.2 : 5, b = (i * Math.PI) / 5 - Math.PI / 2; ctx.lineTo(sx + Math.cos(b) * r, sy + Math.sin(b) * r); }
+          ctx.closePath(); ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
     drawCaught(ctx) {
       const c = this.cs; if (!c) return false;
       const ivy = c.ivy, A = G.art;
-      if (ivy.state === 'frozen' || c.kind === 'run') return false; // normal player draw
+      if (c.kind === 'run') return false; // normal player draw
       const opts = { state: ivy.state, facing: ivy.facing, t: G.time, speed: 0, k: ivy.k, drag: ivy.drag };
-      A.drawIvy(ctx, ivy.x, ivy.y, opts);
+      this.drawDeathIvy(ctx, c, ivy, opts);
       const s = c.spider;
       if (s && A.drawSpider) {
         if (s.mode === 'pull') A.drawThread(ctx, s.x, s.y, ivy.x + c.dir * 24, ivy.y - 6, { t: G.time, taut: true });
