@@ -42,7 +42,7 @@
             setTimeout(() => AS.Audio.play('flutter', true), 120);
             setTimeout(() => AS.Audio.play('squawk', true), 260);
           }
-          else { AS.Audio.play('shot'); setTimeout(() => AS.Audio.play('squawk'), 140); }
+          else { setTimeout(() => AS.Audio.play('squawk', true), 140); }
           break;
         case 'gameover': AS.Audio.play('gameover'); onGameOver(); break;
         default: break;
@@ -105,7 +105,10 @@
     try {
       if (mode === 'playing') {
         animT += dt;
-        const evs = AS.Game.update(state, dt, AS.Input.read());
+        const inp = AS.Input.read();
+        // lövés módban minden kattintás/koppintás lövés: mindig szól a lövéshang, akkor is, ha mellément
+        if (inp.click && state.opts.birdMode === 'shoot' && state.mode !== 'gameover') AS.Audio.play('shot');
+        const evs = AS.Game.update(state, dt, inp);
         handleEvents(evs);
         AS.Render.draw(ctx, state, style(), animT);
         AS.UI.updateHUD(state);

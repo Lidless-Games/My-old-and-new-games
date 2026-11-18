@@ -153,6 +153,38 @@
     s.connect(flt); flt.connect(g); g.connect(master);
     s.start(t0); s.stop(t0 + dur + 0.05);
   }
+  // szűrt zaj, amelynek a sávközepe lassan csúszik f0-ból f1-be (suhogás); halk felfutás, kitartás, elhalás
+  function whoosh(dur, vol, f0, f1, q, delay) {
+    const t0 = ctx.currentTime + (delay || 0);
+    const s = ctx.createBufferSource();
+    s.buffer = noiseBuf; s.loop = true;
+    const flt = ctx.createBiquadFilter();
+    flt.type = 'bandpass'; flt.Q.value = q;
+    flt.frequency.setValueAtTime(f0, t0);
+    flt.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + dur * 0.25);
+    g.gain.setValueAtTime(vol, t0 + dur * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    s.connect(flt); flt.connect(g); g.connect(master);
+    s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.05);
+  }
+  // azonnal induló zajdörrenés, aluláteresztő szűrővel, amely f0-ból f1-be sötétedik
+  function bang(dur, vol, f0, f1, delay) {
+    const t0 = ctx.currentTime + (delay || 0);
+    const s = ctx.createBufferSource();
+    s.buffer = noiseBuf;
+    const flt = ctx.createBiquadFilter();
+    flt.type = 'lowpass'; flt.Q.value = 0.7;
+    flt.frequency.setValueAtTime(f0, t0);
+    flt.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    s.connect(flt); flt.connect(g); g.connect(master);
+    s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.05);
+  }
   // éles, sávszűrt zajlöket gyors lecsengéssel (taps, szárnylebbenés)
   function burst(dur, vol, freq, q, delay, f1) {
     const t0 = ctx.currentTime + (delay || 0);
@@ -171,19 +203,20 @@
     s.start(t0, Math.random() * 0.8); s.stop(t0 + dur + 0.03);
   }
   const SYNTH = {
-    fall()     {
-      // levélzizzenés (az alma leválik az ágról) + jól hallható, lefelé csúszó fütty
-      burst(0.14, 0.32, 2600, 1.4, 0, 1500);
-      burst(0.08, 0.22, 1800, 1.8, 0.05);
-      tone(1150, 0.34, 'sine', 0.2, 0.03, 420);
-      tone(2300, 0.2, 'sine', 0.05, 0.03, 900);
-    },
+    // lehulló alma: elnyújtott, halk suhogás, magasról mélyülő (mint egy zuhanó rakéta)
+    fall()     { whoosh(1.6, 0.6, 2600, 320, 3.5); },
     // elkapás: kongó puffanás a lavórban + kis vidám csilingelés
     catch()    { tone(160, 0.22, 'sine', 0.4, 0, 70); burst(0.12, 0.35, 300, 1.2, 0); tone(988, 0.1, 'triangle', 0.22, 0.06); tone(1319, 0.14, 'triangle', 0.2, 0.12); },
     // leesett alma: rövid, tompa koppanás a füvön
-    miss()     { burst(0.06, 0.5, 500, 1.5, 0); burst(0.1, 0.25, 260, 1.0, 0.01); },
+    miss()     { burst(0.09, 1.0, 380, 1.0, 0); tone(115, 0.13, 'sine', 0.3, 0, 60); burst(0.12, 0.35, 1400, 0.8, 0.01, 600); },
     // lövés: rövid pukkanás
-    shot()     { burst(0.12, 1.0, 1800, 0.9, 0, 400); tone(220, 0.12, 'square', 0.12, 0, 60); },
+    shot()     {
+      // éles csattanás + zajos dörrenés gyorsan sötétedő szűrővel + mély döndülés + rövid visszhang
+      burst(0.04, 0.9, 3500, 0.8, 0);
+      bang(0.45, 1.3, 7000, 250, 0);
+      tone(150, 0.32, 'sine', 0.7, 0, 42);
+      bang(0.35, 0.25, 1800, 200, 0.13);
+    },
     // madár-rikoltás: két éles, ereszkedő kárrogás
     squawk()   { [0, 0.16].forEach((d) => { tone(900, 0.13, 'sawtooth', 0.14, d, 520); burst(0.1, 0.25, 1400, 3, d); }); },
     // szárnycsapás: két puha suhogás
