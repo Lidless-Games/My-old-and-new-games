@@ -24,24 +24,25 @@
   function buildPhoto(imgs) {
     const need = ['bg.jpg', 'bg_flash.jpg', 'apple_red.png', 'apple_green.png', 'apple_gold.png', 'shadow.png'];
     for (let i = 0; i < 4; i++) need.push('basin' + i + '.png');
-    for (let i = 1; i <= 9; i++) need.push('bird' + i + '.png');
     for (const n of need) if (!imgs[n]) return null;
     const P = Art.buildPhotoExtras(imgs['apple_red.png']);
     P.bg = imgs['bg.jpg'];
     P.flash = imgs['bg_flash.jpg'];
     P.shadow = imgs['shadow.png'];
     // fotós almák: a test középpontja kerül az (x,y)-ra, a méretet úgy skálázzuk, hogy a testek egyformák legyenek
-    P.apple.red = { c: imgs['apple_red.png'], ax: 70 / 134, ay: 76 / 134, k: 1 };
-    P.apple.green = { c: imgs['apple_green.png'], ax: 0.5, ay: 0.5, k: 0.78 };
-    P.apple.gold = { c: imgs['apple_gold.png'], ax: 63 / 134, ay: 73 / 134, k: 1 };
+    P.apple.red = { c: imgs['apple_red.png'], ax: 0.5, ay: 0.56, k: 1 };
+    P.apple.green = { c: imgs['apple_green.png'], ax: 0.5, ay: 0.56, k: 1 };
+    P.apple.gold = { c: imgs['apple_gold.png'], ax: 0.5, ay: 0.56, k: 1 };
     P.basin = [0, 1, 2, 3].map((i) => imgs['basin' + i + '.png']);
-    P.bird = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => imgs['bird' + i + '.png']);
+    P.bird = cartoon ? cartoon.bird : Art.buildCartoon().bird; // the bird stays drawn in photo mode too
     return P;
   }
 
   function load(onProgress) {
     if (loadPromise) return loadPromise;
-    const names = []; // web version: drawn (cartoon) graphics only, no photo assets
+    // photo mode: AI-generated photos (own assets); the bird is the drawn one
+    const names = ['bg.jpg', 'bg_flash.jpg', 'apple_red.png', 'apple_green.png', 'apple_gold.png', 'shadow.png'];
+    for (let i = 0; i < 4; i++) names.push('basin' + i + '.png');
     const total = names.length + 1;
     let done = 0;
     const imgs = {};
