@@ -34,6 +34,7 @@
     P.apple.green = { c: imgs['apple_green.png'], ax: 0.5, ay: 0.56, k: 1 };
     P.apple.gold = { c: imgs['apple_gold.png'], ax: 0.5, ay: 0.56, k: 1 };
     P.basin = [0, 1, 2, 3].map((i) => imgs['basin' + i + '.png']);
+    if (imgs['basinw0.png']) P.basinW = [0, 1, 2, 3].map((i) => imgs['basinw' + i + '.png']);
     P.bird = cartoon ? cartoon.bird : Art.buildCartoon().bird; // the bird stays drawn in photo mode too
     return P;
   }
@@ -41,7 +42,8 @@
   function load(onProgress) {
     if (loadPromise) return loadPromise;
     // photo mode: AI-generated photos (own assets); the bird is the drawn one
-    const names = []; // photo mode switched off on main until the foto-mod branch is ready
+    const names = ['bg.jpg', 'bg_flash.jpg', 'apple_red.png', 'apple_green.png', 'apple_gold.png', 'shadow.png'];
+    for (let i = 0; i < 4; i++) names.push('basin' + i + '.png', 'basinw' + i + '.png');
     const total = names.length + 1;
     let done = 0;
     const imgs = {};
@@ -150,9 +152,38 @@
     }
     const prox = clamp(1 - Math.max(0, gy - a.y) / 420, 0, 1);
     drawShadow(ctx, P, a.x, gy + 18 * s, base * (0.75 + 0.35 * prox), 0.45 + 0.45 * prox);
+    if (P === photo) drawSwirl(ctx, a.x, gy + 18 * s, base * (0.75 + 0.35 * prox), prox, a.depth);
+  }
+
+  // photo mode: a small whirling light marks where a falling apple will land (visible on dark grass too)
+  function drawSwirl(ctx, x, y, w, prox, depth) {
+    const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    const rx = w * (0.62 - 0.18 * prox), ry = rx * 0.32;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 3; k++) {
+      const a0 = t * (2.4 + 1.6 * prox) + (k * Math.PI * 2) / 3;
+      ctx.beginPath();
+      for (let i = 0; i <= 14; i++) {
+        const a = a0 + i * 0.12, r = 1 - i * 0.025;
+        const px = Math.cos(a) * rx * r, py = Math.sin(a) * ry * r;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      const lw = Math.max(2.5, w * 0.05);
+      ctx.strokeStyle = 'rgba(40,30,0,' + (0.25 + 0.3 * prox).toFixed(2) + ')'; // dark edge: readable on bright grass
+      ctx.lineWidth = lw + 3;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,236,150,' + (0.6 + 0.4 * prox).toFixed(2) + ')'; // warm glow: readable on dark grass
+      ctx.lineWidth = lw;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   // ---------------------------------------------------------------- lavór
+  // wide-basin bonus: a separately made wide tub (the apples keep their shape) instead of stretching
+  function basinImg(P, ph, wf) { return P.basinW && wf > 1.3 ? P.basinW[ph] : P.basin[ph]; }
   function drawBasinSprite(ctx, img, bx, gy, s, wf, ang, dir) {
     const size = CFG.BASIN_SIZE * s;
     const cy = gy + CFG.BASIN_BOX_OFFSET_Y * s;
@@ -199,7 +230,7 @@
     }
     // lavór
     const ph = p < 0.3 ? 3 : p < 0.38 ? 2 : p < 0.46 ? 1 : 0;
-    drawBasinSprite(ctx, P.basin[ph], b.x, gy, s, wf, ang, dir);
+    drawBasinSprite(ctx, basinImg(P, ph, wf), b.x, gy, s, wf, ang, dir);
     // kiömlő almák
     const cyBox = gy + CFG.BASIN_BOX_OFFSET_Y * s;
     const pxl = dir * 0.43 * size * wf, pyl = 0.49 * size;
@@ -590,7 +621,7 @@
       if (it.t === 0) drawOneApple(ctx, P, it.ref, now);
       else if (it.t === 1) {
         if (state.mode === 'levelup') drawLevelUp(ctx, P, state, wf);
-        else drawBasinSprite(ctx, P.basin[clamp(b.phase | 0, 0, 3)], b.x, CFG.groundY(b.depth), CFG.scale(b.depth), wf, 0, 1);
+        else drawBasinSprite(ctx, basinImg(P, clamp(b.phase | 0, 0, 3), wf), b.x, CFG.groundY(b.depth), CFG.scale(b.depth), wf, 0, 1);
       } else {
         const s = CFG.scale(hh.depth);
         drawHedgehog(ctx, P, hh, s);
