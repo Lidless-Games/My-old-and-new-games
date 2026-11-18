@@ -43,34 +43,59 @@
     } catch (e) { /* ignore */ }
   }
 
-  // ---- generált zene: vidám, könnyed dúr dallam pengetős hangszínnel, 8 ütemes körforgás ----
-  const BPM = 112, STEP = 60 / BPM / 2; // nyolcadok
-  const MEL = [ // 64 nyolcad; 0 = szünet (MIDI hangmagasság)
-    72,0,76,79, 77,76,74,0, 72,0,74,76, 74,72,71,0,
-    69,0,72,76, 74,72,71,72, 74,0,71,67, 69,71,72,0,
-    72,0,76,79, 81,79,77,76, 77,0,74,77, 76,74,72,0,
-    69,72,71,69, 67,0,71,74, 72,0,67,64, 60,0,0,0 ];
-  const BASS = [48, 45, 41, 43, 48, 45, 43, 48]; // ütemenként (C a F G C a G C)
+  // ---- generált zene: napos reggel – csilingelő dallam, ukulele-szerű pengetés, csörgő és madárcsicsergés ----
+  const BPM = 126, STEP = 60 / BPM / 2; // nyolcadok
+  const MEL = [ // 64 nyolcad, G-dúr; 0 = szünet (MIDI)
+    79,0,83,86, 84,83,81,0, 79,81,83,79, 76,0,74,0,
+    76,79,81,83, 81,79,76,79, 81,0,79,76, 74,0,0,0,
+    79,0,83,86, 88,86,84,83, 84,0,81,84, 83,81,79,0,
+    76,79,83,81, 79,76,74,76, 79,0,74,71, 67,0,0,0 ];
+  const CHORD = [[55,59,62],[52,55,59],[48,52,55],[50,54,57],[55,59,62],[52,55,59],[50,54,57],[55,59,62]]; // G e C D G e D G
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
-  function pluck(t, freq, vol, dur, type) {
+  function voice(t, freq, vol, dur, type, bright) {
     const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
     o.type = type; o.frequency.setValueAtTime(freq, t);
-    f.type = 'lowpass'; f.frequency.setValueAtTime(freq * 6, t); f.frequency.exponentialRampToValueAtTime(freq * 1.5, t + dur);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    f.type = 'lowpass'; f.frequency.setValueAtTime(freq * (bright || 6), t); f.frequency.exponentialRampToValueAtTime(freq * 1.5, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(f); f.connect(g); g.connect(musicGain); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function glock(t, freq, vol) { // csengettyű: alaphang + fémes felhang
+    voice(t, freq, vol, 0.6, 'sine', 8);
+    voice(t, freq * 2.76, vol * 0.35, 0.25, 'sine', 8);
+  }
+  function shaker(t, vol) {
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = 6000;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    s.connect(f); f.connect(g); g.connect(musicGain); s.start(t, Math.random() * 0.8); s.stop(t + 0.08);
+  }
+  function chirp(t, f0, f1, dur, vol) { // egy madárhang: gyors, trillázó füttyív
+    const o = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    lfo.frequency.value = 30 + Math.random() * 25; lg.gain.value = f0 * 0.06;
+    lfo.connect(lg); lg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.2); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(musicGain); o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
+  }
+  let nextBird = 0;
+  function birdsong(t) { // véletlen dalocska: 3–7 csipogás, néha két madár „beszélget”
+    const n = 3 + Math.floor(Math.random() * 5), base = 2600 + Math.random() * 1800, up = Math.random() < 0.5;
+    for (let k = 0; k < n; k++) {
+      const d = k * (0.07 + Math.random() * 0.05), f = base * (1 + (Math.random() - 0.5) * 0.25);
+      chirp(t + d, up ? f * 0.8 : f * 1.2, up ? f * 1.25 : f * 0.75, 0.05 + Math.random() * 0.05, 0.05);
+    }
   }
   function scheduleMusic() {
     if (!ctx) return;
     while (nextNote < ctx.currentTime + 0.15) {
-      const i = step % 64, bar = Math.floor(i / 8);
-      if (MEL[i]) pluck(nextNote, mtof(MEL[i]), 0.16, STEP * 1.6, 'triangle');
-      if (i % 8 === 0) pluck(nextNote, mtof(BASS[bar] - 12), 0.22, STEP * 3.5, 'sine');
-      if (i % 8 === 4) pluck(nextNote, mtof(BASS[bar] - 5), 0.12, STEP * 2.5, 'sine');
-      if (i % 2 === 1) { // halk pengetett kíséret
-        [0, 4, 7].forEach((d) => pluck(nextNote, mtof(BASS[bar] + 12 + d), 0.035, STEP * 0.9, 'square'));
-      }
+      const i = step % 64, bar = Math.floor(i / 8), ch = CHORD[bar];
+      if (MEL[i]) glock(nextNote, mtof(MEL[i]), 0.12);
+      if (i % 4 === 0) voice(nextNote, mtof(ch[0] - 12), 0.2, STEP * 1.8, 'triangle', 4);          // bőgő 1 és 3-on
+      if (i % 4 === 2 || i % 8 === 3) ch.forEach((m, k) => voice(nextNote + k * 0.012, mtof(m + 12), 0.045, STEP * 1.1, 'triangle', 10)); // ukulele-pengetés
+      shaker(nextNote, i % 2 ? 0.05 : 0.025);
       nextNote += STEP; step++;
     }
+    if (ctx.currentTime > nextBird) { birdsong(ctx.currentTime + 0.05); nextBird = ctx.currentTime + 1.8 + Math.random() * 3.5; }
   }
   function applyMusic() {
     try {
