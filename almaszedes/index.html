@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<title>Almaszedés</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1c3a20">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage"><canvas id="game" width="1900" height="850"></canvas></div>
+<div id="pad" aria-hidden="true"><div id="knob"></div></div>
+<button id="padswap" type="button" aria-label="Irányító áthelyezése a másik oldalra"><svg viewBox="0 0 48 24" aria-hidden="true"><path d="M17 4 9 12l8 8M31 4l8 8-8 8M9 12h30" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<div id="loading" class="screen on">
+  <div class="card loadcard">
+    <h1 class="title">Almaszedés</h1>
+    <div class="bar"><i id="loadbar"></i></div>
+    <p id="loadtxt">Betöltés…</p>
+  </div>
+</div>
+<noscript><p style="position:fixed;top:1em;left:1em;color:#fff">A játékhoz JavaScript szükséges.</p></noscript>
+<script src="js/config.js"></script>
+<script src="js/game.js"></script>
+<script src="js/art.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

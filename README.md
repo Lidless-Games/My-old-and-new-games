@@ -5,8 +5,8 @@ Lidless játékai a böngészőben: klasszikus ötletek új köntösben és vado
 | Játék | Mappa |
 |---|---|
 | Ivy Nightshade (új, fejlesztés alatt) | `ivy-nightshade/` |
-| Méh-mentés | később kerül ide |
-| Almaszedés | később kerül ide |
+| Méh-mentés | `meh-mentes/` |
+| Almaszedés | `almaszedes/` |
 
 Statikus oldal: Vercelen a repó gyökere a kimenet, build lépés nélkül.
 

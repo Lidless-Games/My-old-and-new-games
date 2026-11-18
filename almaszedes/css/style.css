@@ -1,0 +1,307 @@
+/* Almaszedés – felület. A méretezés a --ui változón (px) alapul, amit a js/ui.js állít. */
+:root {
+  --ui: 14px;
+  --stage-l: 0px; --stage-t: 0px; --stage-w: 100vw; --stage-h: 100vh;
+  --hud-l: 0px; --hud-t: 0px; --hud-w: 100vw; --hud-h: auto;
+  --pad-l: 10px; --pad-b: 10px; --pad-size: 130px;
+  --red: #e63946; --red-d: #a8202c;
+  --green: #43a047; --green-d: #2a6e2e;
+  --cream: #fff8e6; --cream-2: #ffeec2; --line: #ecd9a3;
+  --brown: #4a2c17; --brown-2: #86592f;
+  --blue: #1e88e5;
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  font-family: var(--font);
+  color: var(--brown);
+  background:
+    radial-gradient(ellipse at 50% 0%, #2f5d33 0%, rgba(47, 93, 51, 0) 70%),
+    linear-gradient(180deg, #213f25, #122616);
+}
+
+/* ---------- játéktér ---------- */
+#stage {
+  position: fixed;
+  left: var(--stage-l); top: var(--stage-t);
+  width: var(--stage-w); height: var(--stage-h);
+  box-shadow: 0 0 3em rgba(0, 0, 0, .55);
+  background: #8fd16a;
+  touch-action: none;
+}
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+body:not(.playing) #stage canvas { cursor: default; }
+
+/* ---------- képernyők (menük) ---------- */
+.screen {
+  position: fixed; inset: 0; z-index: 20;
+  display: none; padding: calc(var(--ui) * .8);
+  font-size: var(--ui);
+  background: rgba(16, 36, 18, .38);
+  overflow: auto; overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-user-select: none; user-select: none;
+}
+.screen.on { display: flex; animation: fadein .18s ease-out; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+.screen > .card { margin: auto; }
+
+.card {
+  position: relative;
+  background: linear-gradient(180deg, var(--cream), #fff1cc);
+  border: .25em solid #fff;
+  border-radius: 1.7em;
+  box-shadow: 0 .45em 0 rgba(0, 0, 0, .2), 0 1.4em 3em rgba(0, 0, 0, .4);
+  padding: 1.3em 1.5em;
+  width: min(100%, 44em);
+}
+.card.wide { width: min(100%, 56em); }
+.card.scroll { display: flex; flex-direction: column; max-height: 100%; }
+.card.scroll > .body { overflow: auto; min-height: 0; margin: .6em -.5em; padding: 0 .5em; touch-action: pan-y; }
+
+.title {
+  margin: 0; font-weight: 900; letter-spacing: .01em;
+  font-size: 3.1em; line-height: 1.05; color: var(--red);
+  text-shadow: 0 .06em 0 #fff, 0 .1em 0 var(--red-d), 0 .2em .35em rgba(0, 0, 0, .25);
+}
+h2 { margin: 0; font-size: 1.9em; font-weight: 900; color: var(--red); line-height: 1.1; text-shadow: 0 .05em 0 #fff; }
+h3 { margin: 1em 0 .4em; font-size: 1.05em; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--green-d); }
+p { margin: 0; }
+
+/* ---------- gombok ---------- */
+.btn {
+  font: inherit; font-weight: 800; font-size: 1.1em; color: #fff;
+  background: linear-gradient(180deg, #58b85c, var(--green));
+  border: 0; border-bottom: .28em solid var(--green-d);
+  border-radius: 1em;
+  min-height: max(44px, 3.1em); padding: .35em 1.3em;
+  cursor: pointer; touch-action: manipulation;
+  text-shadow: 0 .08em 0 rgba(0, 0, 0, .22);
+  box-shadow: 0 .25em .6em rgba(0, 0, 0, .18);
+  transition: transform .06s, filter .12s;
+}
+.btn:hover { filter: brightness(1.07); }
+.btn:active { transform: translateY(.16em); border-bottom-width: .12em; }
+.btn.red { background: linear-gradient(180deg, #f2545f, var(--red)); border-bottom-color: var(--red-d); }
+.btn.big { font-size: 1.5em; min-height: max(52px, 2.6em); }
+.btn.ghost {
+  color: var(--brown); text-shadow: none; background: #fff;
+  border: .14em solid var(--line); border-bottom-width: .28em; border-bottom-color: #dcc383;
+}
+.btn.ghost:active { border-bottom-width: .14em; }
+.btn.small { font-size: .95em; padding: .2em .9em; }
+
+button:focus-visible, input:focus-visible {
+  outline: .24em solid var(--blue); outline-offset: .16em;
+}
+
+/* ---------- főmenü ---------- */
+.menu-grid { display: grid; grid-template-columns: 1fr; gap: 1.1em; align-items: center; }
+body.wide .menu-grid { grid-template-columns: 1.05fr 1fr; gap: 1.5em; }
+.menu-left { display: flex; flex-direction: column; gap: .8em; align-items: stretch; text-align: center; }
+.title-row { display: flex; align-items: center; justify-content: center; gap: .3em; }
+.title-row canvas { flex: none; }
+.tagline { font-weight: 700; color: var(--brown-2); line-height: 1.3; }
+.btn-row { display: flex; gap: .6em; }
+.btn-row > .btn { flex: 1; padding-left: .5em; padding-right: .5em; }
+
+.settings { background: rgba(255, 224, 140, .45); border: .14em solid var(--line); border-radius: 1.2em; padding: .8em .9em; display: flex; flex-direction: column; gap: .6em; }
+.field > label, .field > .lab { display: block; font-size: .85em; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--brown-2); margin: 0 0 .25em .3em; }
+.seg { display: flex; gap: .2em; padding: .2em; background: #f1dfae; border-radius: 1em; box-shadow: inset 0 .1em .25em rgba(0, 0, 0, .15); }
+.seg button {
+  flex: 1; font: inherit; font-weight: 800; color: var(--brown-2);
+  background: transparent; border: 0; border-radius: .8em;
+  min-height: max(40px, 2.7em); padding: .2em .4em; cursor: pointer; touch-action: manipulation;
+}
+.seg button:hover { background: rgba(255, 255, 255, .5); }
+.seg button[aria-checked="true"] {
+  background: linear-gradient(180deg, #58b85c, var(--green)); color: #fff;
+  text-shadow: 0 .08em 0 rgba(0, 0, 0, .2); box-shadow: 0 .15em 0 var(--green-d);
+}
+.toggles { display: flex; gap: .5em; flex-wrap: wrap; }
+.toggles .btn { flex: 1 1 auto; font-size: .95em; min-height: max(44px, 2.8em); padding: .2em .6em; display: flex; align-items: center; justify-content: center; gap: .4em; white-space: nowrap; }
+.toggles .btn[aria-pressed="false"] { opacity: .75; }
+.toggles .btn svg { width: 1.3em; height: 1.3em; flex: none; }
+.tip { display: none; align-items: center; gap: .6em; background: #e4f3ff; border: .14em solid #b6dcf7; border-radius: 1em; padding: .4em .5em .4em .8em; font-size: .9em; font-weight: 700; color: #1d4e75; text-align: left; }
+body.portrait .tip.on { display: flex; }
+.tip .x { margin-left: auto; flex: none; width: 2.6em; height: 2.6em; min-width: 44px; min-height: 44px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .8); font: inherit; font-weight: 900; color: #1d4e75; cursor: pointer; }
+
+/* ---------- súgó ---------- */
+.help-head, .card-head { display: flex; align-items: center; justify-content: space-between; gap: .8em; }
+.rows { display: grid; grid-template-columns: 1fr; gap: .45em; }
+body.wide .rows { grid-template-columns: 1fr 1fr; gap: .5em .9em; }
+.row { display: flex; align-items: center; gap: .7em; background: rgba(255, 255, 255, .7); border: .12em solid var(--line); border-radius: 1em; padding: .4em .7em .4em .45em; min-height: 3.4em; }
+.row .ic { flex: none; display: flex; align-items: center; justify-content: center; }
+.row .ic canvas { display: block; }
+.row .ic .badge { font-weight: 900; color: #fff; background: var(--red); border-radius: .7em; padding: .2em .5em; text-shadow: 0 .06em 0 rgba(0, 0, 0, .25); }
+.row b { display: block; font-size: 1.02em; }
+.row span.d { display: block; font-size: .92em; line-height: 1.25; color: var(--brown-2); font-weight: 600; }
+.row b .pts { color: var(--red); margin-left: .35em; }
+.row b .pts.neg { color: #7b1fa2; }
+.ctl { list-style: none; margin: 0; padding: 0; display: grid; gap: .3em; font-weight: 600; line-height: 1.35; }
+.ctl li { padding-left: 1.1em; position: relative; }
+.ctl li::before { content: ""; position: absolute; left: .1em; top: .55em; width: .5em; height: .5em; border-radius: 50%; background: var(--red); }
+kbd { font: inherit; font-weight: 800; font-size: .9em; background: #fff; border: .1em solid #cdb77a; border-bottom-width: .22em; border-radius: .4em; padding: 0 .45em; }
+
+/* ---------- ranglista ---------- */
+.tabs { margin: .8em 0 .6em; }
+table.board { width: 100%; border-collapse: separate; border-spacing: 0 .25em; font-weight: 700; }
+table.board th { font-size: .8em; text-transform: uppercase; letter-spacing: .06em; color: var(--brown-2); text-align: left; padding: 0 .6em .2em; }
+table.board td { background: rgba(255, 255, 255, .75); padding: .38em .6em; }
+table.board td:first-child { border-radius: .8em 0 0 .8em; width: 2.6em; font-weight: 900; color: var(--red); }
+table.board td:last-child { border-radius: 0 .8em .8em 0; }
+table.board th.n, table.board td.n { text-align: right; font-variant-numeric: tabular-nums; }
+table.board td.name { max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.board tr.me td { background: #ffd95a; color: #5a2d00; }
+.empty { text-align: center; padding: 1.2em .5em; font-weight: 700; color: var(--brown-2); }
+
+/* ---------- szünet / játék vége ---------- */
+.pause-card { text-align: center; width: min(100%, 24em); display: flex; flex-direction: column; gap: .8em; }
+.over-card { text-align: center; width: min(100%, 36em); display: flex; flex-direction: column; gap: .7em; max-height: 100%; overflow-y: auto; touch-action: pan-y; }
+.over-card > * { flex: none; }
+.stats { display: flex; justify-content: center; gap: .8em; }
+.stat { background: #fff; border: .12em solid var(--line); border-radius: 1em; padding: .3em 1em; min-width: 7em; }
+.stat small { display: block; font-size: .8em; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--brown-2); }
+.stat strong { display: block; font-size: 2em; line-height: 1.1; color: var(--red); font-variant-numeric: tabular-nums; }
+.stat.sm strong { color: var(--green-d); }
+.name-row { display: flex; gap: .5em; align-items: stretch; }
+.name-row input {
+  flex: 1; min-width: 0; font: inherit; font-weight: 800; font-size: 1.1em; color: var(--brown);
+  background: #fff; border: .16em solid var(--line); border-radius: 1em; padding: .3em .8em; min-height: max(44px, 2.8em);
+  -webkit-user-select: text; user-select: text; touch-action: manipulation;
+}
+.name-row input::placeholder { color: #b9a578; font-weight: 700; }
+.msg { font-weight: 800; color: var(--green-d); }
+.over-card .btn-row { margin-top: .2em; }
+.over-card .scroller { max-height: none; overflow: auto; touch-action: pan-y; text-align: left; }
+
+/* ---------- betöltés ---------- */
+.loadcard { text-align: center; width: min(100%, 26em); display: flex; flex-direction: column; gap: .8em; align-items: center; }
+.bar { width: 100%; height: 1.3em; background: #f1dfae; border-radius: 1em; overflow: hidden; box-shadow: inset 0 .1em .25em rgba(0, 0, 0, .2); }
+.bar > i { display: block; height: 100%; width: 0; background: linear-gradient(180deg, #58b85c, var(--green)); border-radius: 1em; transition: width .15s; }
+#loadtxt { font-weight: 700; color: var(--brown-2); }
+
+/* ---------- HUD ---------- */
+#hud {
+  position: fixed; z-index: 10; display: none; pointer-events: none;
+  left: var(--hud-l); top: var(--hud-t); width: var(--hud-w); height: var(--hud-h);
+  font-size: var(--ui); padding: .5em .6em;
+  flex-wrap: wrap; align-content: flex-start; gap: .45em; justify-content: space-between; align-items: flex-start;
+}
+#hud.on { display: flex; }
+body.portrait #hud { align-content: flex-end; align-items: flex-end; padding-bottom: .7em; }
+#hud .grp { display: flex; flex-wrap: wrap; gap: .4em; align-items: center; min-width: 0; }
+#hud .grp.r { justify-content: flex-end; margin-left: auto; }
+.pill {
+  display: flex; align-items: center; gap: .4em; white-space: nowrap;
+  background: rgba(255, 248, 230, .93); border: .14em solid #fff; border-radius: 1em;
+  padding: .15em .7em; min-height: 2.5em; font-weight: 900;
+  box-shadow: 0 .18em 0 rgba(0, 0, 0, .22), 0 .3em .8em rgba(0, 0, 0, .15);
+}
+.pill small { font-size: .72em; letter-spacing: .07em; text-transform: uppercase; color: var(--brown-2); font-weight: 900; }
+.pill .big { font-size: 1.55em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--red); min-width: 1.5em; text-align: right; display: inline-block; }
+.pill canvas { display: block; flex: none; }
+.pill.combo { background: linear-gradient(180deg, #ff8a3d, #f0561f); color: #fff; border-color: #ffe0a8; text-shadow: 0 .08em 0 rgba(0, 0, 0, .25); }
+.pill.combo small { color: #ffe9c7; }
+.pill.bonus { background: rgba(226, 244, 255, .95); }
+.pill.wind { background: rgba(232, 246, 255, .95); color: #1a5f8e; }
+.fillwrap { display: flex; align-items: center; gap: .5em; }
+.meter { position: relative; width: 9em; height: 1.35em; background: #f1dfae; border-radius: 1em; overflow: hidden; box-shadow: inset 0 .1em .25em rgba(0, 0, 0, .2); }
+.meter > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(180deg, #ff6f6f, var(--red)); border-radius: 1em; transition: width .2s; }
+.meter > span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: .8em; color: var(--brown); font-variant-numeric: tabular-nums; text-shadow: 0 0 .3em #fff, 0 0 .3em #fff; }
+.hbtn {
+  pointer-events: auto; font: inherit; color: var(--brown); cursor: pointer; touch-action: manipulation;
+  width: max(44px, 2.9em); height: max(44px, 2.9em); border-radius: 50%;
+  background: rgba(255, 248, 230, .95); border: .14em solid #fff;
+  box-shadow: 0 .18em 0 rgba(0, 0, 0, .25), 0 .3em .8em rgba(0, 0, 0, .15);
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.hbtn:hover { background: #fff; }
+.hbtn:active { transform: translateY(.12em); }
+.hbtn svg { width: 55%; height: 55%; }
+.hbtn .bars { display: flex; gap: .22em; }
+.hbtn .bars i { display: block; width: .4em; height: 1.2em; background: var(--brown); border-radius: .15em; }
+.pulse { animation: pulse .22s ease-out; }
+@keyframes pulse { from { transform: scale(1.25); } to { transform: scale(1); } }
+
+/* ---------- virtuális pad ---------- */
+#pad {
+  position: fixed; z-index: 15; display: none; touch-action: none;
+  left: var(--pad-l); bottom: var(--pad-b); width: var(--pad-size); height: var(--pad-size);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, .0) 0 38%, rgba(255, 255, 255, .22) 39% 100%),
+    rgba(30, 60, 30, .35);
+  border: .2em solid rgba(255, 255, 255, .7);
+  box-shadow: 0 .3em 1em rgba(0, 0, 0, .3);
+}
+#pad::before, #pad::after { content: ""; position: absolute; background: rgba(255, 255, 255, .5); border-radius: 2px; }
+#pad::before { left: 50%; top: 12%; bottom: 12%; width: 3px; margin-left: -1.5px; }
+#pad::after { top: 50%; left: 12%; right: 12%; height: 3px; margin-top: -1.5px; }
+body.touch.playing.padmode #pad { display: block; }
+#knob {
+  position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; margin: -21% 0 0 -21%;
+  border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #ffe9a8 70%, #f3c84c);
+  border: 2px solid #fff; box-shadow: 0 .25em .6em rgba(0, 0, 0, .35);
+  pointer-events: none; will-change: transform;
+}
+
+/* ---------- üzenet ---------- */
+#toast {
+  position: fixed; z-index: 40; left: 50%; bottom: 8%; transform: translateX(-50%);
+  max-width: 90vw; background: rgba(40, 24, 12, .92); color: #fff; font-weight: 700;
+  font-size: var(--ui); padding: .6em 1.1em; border-radius: 1em; display: none; text-align: center;
+}
+#toast.on { display: block; }
+
+/* alacsony nézet (telefon fekvő tájolásban) */
+@media (max-height: 480px) {
+  .card { padding: .8em 1.1em; border-radius: 1.3em; }
+  .title { font-size: 2.5em; }
+  .tagline { display: none; }
+  .menu-left { gap: .6em; }
+  .settings { gap: .3em; padding: .5em .7em; }
+  .field > .lab { margin-bottom: .1em; }
+  .seg button { min-height: 40px; }
+  .toggles { flex-wrap: nowrap; gap: .4em; }
+  .toggles .btn { min-height: 44px; font-size: .88em; padding: .2em .4em; }
+  .toggles .btn .fsl { display: none; }
+  .btn.big { min-height: 48px; font-size: 1.35em; }
+  h2 { font-size: 1.6em; }
+  .over-card { gap: .45em; }
+  .stat strong { font-size: 1.6em; }
+  .over-card .scroller { max-height: none; }
+  .stat.diff { display: none; }
+  .row { min-height: 3em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen.on, .pulse { animation: none; }
+}
+
+/* --- egérmutató játék közben: vastag célkereszt (lövés) / kéz (hessegetés) --- */
+body.playing #stage canvas { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2728%27%20height%3D%2728%27%20viewBox%3D%270%200%2056%2056%27%3E%3Cg%20fill%3D%27none%27%20stroke-linecap%3D%27round%27%3E%3Cg%20stroke%3D%27%23fff%27%20stroke-width%3D%279%27%3E%3Ccircle%20cx%3D%2728%27%20cy%3D%2728%27%20r%3D%2717%27/%3E%3Cpath%20d%3D%27M28%203v15M28%2038v15M3%2028h15M38%2028h15%27/%3E%3C/g%3E%3Cg%20stroke%3D%27%23d81e2c%27%20stroke-width%3D%275%27%3E%3Ccircle%20cx%3D%2728%27%20cy%3D%2728%27%20r%3D%2717%27/%3E%3Cpath%20d%3D%27M28%203v15M28%2038v15M3%2028h15M38%2028h15%27/%3E%3C/g%3E%3C/g%3E%3Ccircle%20cx%3D%2728%27%20cy%3D%2728%27%20r%3D%274.5%27%20fill%3D%27%23d81e2c%27%20stroke%3D%27%23fff%27%20stroke-width%3D%272%27/%3E%3C/svg%3E") 14 14, crosshair; }
+body.playing.shoo #stage canvas { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2728%27%20height%3D%2728%27%20viewBox%3D%270%200%2056%2056%27%3E%3Cg%20transform%3D%27rotate%28-12%2028%2028%29%27%20fill%3D%27%23ffd9a8%27%20stroke%3D%27%235a3410%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27%20stroke-linecap%3D%27round%27%3E%3Crect%20x%3D%2714%27%20y%3D%2710%27%20width%3D%277.5%27%20height%3D%2724%27%20rx%3D%273.7%27/%3E%3Crect%20x%3D%2721.5%27%20y%3D%275%27%20width%3D%277.5%27%20height%3D%2728%27%20rx%3D%273.7%27/%3E%3Crect%20x%3D%2729%27%20y%3D%277%27%20width%3D%277.5%27%20height%3D%2727%27%20rx%3D%273.7%27/%3E%3Crect%20x%3D%2736.5%27%20y%3D%2712%27%20width%3D%277%27%20height%3D%2722%27%20rx%3D%273.5%27/%3E%3Cpath%20d%3D%27M14%2030%20L9%2022.5%20a3.8%203.8%200%200%200%20-6.4%204.2%20L11%2043%20q5%209%2015%209%20h4%20q13.5%200%2013.5%20-14%20V28%20H14%20Z%27/%3E%3C/g%3E%3Cg%20stroke%3D%27%23fff%27%20stroke-width%3D%273%27%20stroke-linecap%3D%27round%27%3E%3Cpath%20d%3D%27M46%206l4-4M50%2014h5M41%203V0%27/%3E%3C/g%3E%3C/svg%3E") 14 14, pointer; }
+
+/* ---------- pad oldalcserélő gomb ---------- */
+#padswap {
+  position: fixed; z-index: 15; display: none; touch-action: manipulation; cursor: pointer;
+  left: var(--swap-l); bottom: var(--swap-b); width: var(--swap-w); height: var(--swap-h);
+  border-radius: 999px; border: .16em solid rgba(255, 255, 255, .8); padding: 0;
+  background: rgba(30, 60, 30, .55); color: #fff; box-shadow: 0 .2em .6em rgba(0, 0, 0, .3);
+}
+#padswap svg { width: 55%; height: 60%; display: block; margin: auto; }
+#padswap:active { background: rgba(30, 60, 30, .8); }
+body.touch.playing.padmode #padswap { display: block; }
+body:not(.touch) .touch-only { display: none; }
+.touch-row { display: flex; gap: .5em; }
+.touch-row > .field { flex: 1 1 0; min-width: 0; }
+.touch-row > .field:first-child { flex: .8 1 0; }
+.touch-row .seg button { padding-left: .15em; padding-right: .15em; }
