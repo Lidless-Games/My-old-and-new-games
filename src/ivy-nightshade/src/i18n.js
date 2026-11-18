@@ -1,0 +1,167 @@
+(function () {
+  const G = window.G;
+  const LANGS = ['hu', 'en'];
+
+  G.STRINGS = {
+    hu: {
+      title: 'Ivy Nightshade',
+      subtitle: 'A kétfejű varjú nyomában',
+      menu_new: 'Új játék',
+      menu_continue: 'Folytatás',
+      menu_lang: 'Nyelv',
+      menu_music: 'Zene',
+      menu_controls: 'Irányítás',
+      menu_back: 'Vissza',
+      on: 'be',
+      off: 'ki',
+      lang_name: 'Magyar',
+      controls_1: '← → / A D: mozgás',
+      controls_2: 'Szóköz / ↑ / W: ugrás, ↑ ↓ létrán mászás',
+      controls_3: 'Shift (nyomva): osonás',
+      controls_4: '↓ / E búvóhely előtt: elbújás',
+      controls_5: 'Esc / P: szünet',
+      controls_6: 'Tipp: lépj a zene ütemére – úgy halkabb vagy.',
+      pause_title: 'Szünet',
+      pause_resume: 'Folytatás',
+      pause_menu: 'Főmenü',
+      press_any: 'Nyomj meg egy gombot',
+      hint_hide: '↓ / E – elbújás',
+      hint_unhide: 'Mozdulj, ha előbújnál',
+      hint_sneak: 'Tartsd a Shiftet: osonás',
+      hint_beat: 'Lépj a zene ütemére – úgy halkabb vagy!',
+      hint_creak: 'Nyikorgó padló – ugord át!',
+      hint_chandelier: 'Csillár! Húzd le a fejed – osonj át alatta (Shift)!',
+      hint_sleeper: 'Alvó a közelben – csak osonva!',
+      hint_exit: 'Lépcső lefelé',
+      hint_ghost: 'Szellem! Bújj el, vagy állj meg teljesen mozdulatlanul.',
+      lvl_floor1: '1. szint – A hálószobák',
+      lvl_floor2: '2. szint – Nagymama üvegháza',
+      lvl_floor3: '3. szint – A bácsi laboratóriuma',
+      lvl_floor4: '4. szint – A nagyterem',
+      intro_floor1: 'Anya és apa alszik. Ha felébrednek, újra el kell mondanom, miért vagyok fent.',
+      intro_floor2: 'Nagymama üvegházában a növények vacsoráznak. Nem szeretnék a desszert lenni.',
+      intro_floor3: 'A bácsi laboratóriumából szikrák jönnek. Szerinte ez normális. Nem az.',
+      intro_floor4: 'A nagyteremben a komornyik álmában jár, a csillárok pedig lengenek. Egyiküktől sem kérdezek semmit.',
+      story_1: 'Szünidő van. A kastélyban mindenki alszik, kivéve engem.',
+      story_2: 'A kétfejű varjú nincs a rúdján. A két feje közül egyik sem hajlandó elárulni, hol van.',
+      story_3: 'Eszembe jut: a kastély pincéjének mélyén van egy varázstekercs, amely bárhová elvisz, ahová csak akarsz. Le kell jutnom érte. Csendben.',
+      story_4: 'Senkit nem szabad felébreszteni. Ez a feladat. És ez a legnehezebb rész.',
+      caught_parents: 'Hm?! Ki mászkál ott?',
+      caught_grandma: 'Ó, Ivy, drágám! Egy kis kakaó? Vagy megint a pincébe mész?',
+      caught_uncle: 'Ha-ha, ez nem az, aminek látszik! … Vagy mégis az. Ne mozdulj!',
+      caught_ghost: 'Ahaaa! Látlak ám!',
+      caught_butler: 'Reggelit… kérem… tojást… Ó, uram… Mi? Mindegy. Reggeli.',
+      caught_trap_chandelier: 'Csillár! Aaah! … Nagyon okos csillár.',
+      caught_trap_spark: 'Szikra! Csisziseg a hajam. Ez nem volt benne a tervben.',
+      caught_trap_plant: 'A növény megharapott. Csak a kabátomat. Egyelőre.',
+      caught_trap_flask: 'A lombik zöld füstöt bocsátott ki. Szép. Mérgező. Szép.',
+      ivy_caught_1: 'Ez legalább érdekes volt.',
+      ivy_caught_2: 'Kiváló. Kezdhetem újra.',
+      ivy_caught_3: 'Senki sem látott. Majdnem.',
+      ivy_caught_4: 'Nem félek. Csak nem örülök.',
+      ivy_caught_5: 'A kötelességem a csend. Ezt most elrontottam.',
+      ivy_caught_6: 'Visszamegyek. Nem mosolygok.',
+      ivy_caught_7: 'A varjú nem fog megvárni.',
+      ivy_caught_8: 'Legközelebb óvatosabb leszek. Legalábbis a fejemben.',
+      run_back: 'Vissza a búvóhelyre…',
+      checkpoint: 'Búvóhely megjegyezve',
+      level_done: 'Szint teljesítve',
+      m1_end_1: 'A kazamata ajtaja előtt állok. Valahol lent vár a tekercs.',
+      m1_end_2: 'Folytatás hamarosan…',
+      m1_end_3: 'Nyomj meg egy gombot a főmenühöz.'
+    },
+    en: {
+      title: 'Ivy Nightshade',
+      subtitle: 'The Two-Headed Crow',
+      menu_new: 'New game',
+      menu_continue: 'Continue',
+      menu_lang: 'Language',
+      menu_music: 'Music',
+      menu_controls: 'Controls',
+      menu_back: 'Back',
+      on: 'on',
+      off: 'off',
+      lang_name: 'English',
+      controls_1: '← → / A D: move',
+      controls_2: 'Space / ↑ / W: jump, ↑ ↓ on ladders: climb',
+      controls_3: 'Shift (hold): sneak',
+      controls_4: '↓ / E before a hiding spot: hide',
+      controls_5: 'Esc / P: pause',
+      controls_6: 'Tip: step to the beat of the music. You will be quieter.',
+      pause_title: 'Paused',
+      pause_resume: 'Resume',
+      pause_menu: 'Main menu',
+      press_any: 'Press any key',
+      hint_hide: '↓ / E – hide',
+      hint_unhide: 'Move if you want to come out',
+      hint_sneak: 'Hold Shift: sneak',
+      hint_beat: 'Step to the beat. That is quieter!',
+      hint_creak: 'Creaky boards – jump over them!',
+      hint_chandelier: 'Chandelier! Duck your head – sneak under it (Shift)!',
+      hint_sleeper: 'Someone is asleep – sneak only!',
+      hint_exit: 'Stairs down',
+      hint_ghost: 'A ghost! Hide, or stand perfectly still.',
+      lvl_floor1: 'Floor 1 – The bedrooms',
+      lvl_floor2: 'Floor 2 – Grandma\'s glasshouse',
+      lvl_floor3: 'Floor 3 – Uncle\'s laboratory',
+      lvl_floor4: 'Floor 4 – The great hall',
+      intro_floor1: 'Mum and Dad are asleep. If they wake up, I will have to explain again why I am up.',
+      intro_floor2: 'The plants in Grandma\'s glasshouse are having dinner. I would rather not be dessert.',
+      intro_floor3: 'Sparks are coming out of Uncle\'s laboratory. He says this is normal. It is not.',
+      intro_floor4: 'In the great hall the butler is sleepwalking and the chandeliers are swinging. I am not asking either of them anything.',
+      story_1: 'It is the holidays. Everyone in the castle is asleep, except me.',
+      story_2: 'The two-headed crow is not on its perch. Neither of its heads will say where it went.',
+      story_3: 'Then I remember: deep in the castle dungeon there is a magic scroll that takes you anywhere you like. I have to go down and get it. Quietly.',
+      story_4: 'Nobody may wake up. That is the task. It is also the hardest part.',
+      caught_parents: 'Hm?! Who is wandering about?',
+      caught_grandma: 'Oh, Ivy, darling! Some cocoa? Or are you off to the cellar again?',
+      caught_uncle: 'Ha-ha, it is not what it looks like! … Or it is. Do not move!',
+      caught_ghost: 'Ahaaa! I see youuu!',
+      caught_butler: 'Breakfast… please… eggs… Oh, my lord… Hm? Never mind. Breakfast.',
+      caught_trap_chandelier: 'Chandelier! Aaah! … Very clever chandelier.',
+      caught_trap_spark: 'Sparks! My hair is crackling. That was not in the plan.',
+      caught_trap_plant: 'The plant bit me. Only my coat. For now.',
+      caught_trap_flask: 'The flask puffed green smoke. Lovely. Toxic. Lovely.',
+      ivy_caught_1: 'Well, that was interesting.',
+      ivy_caught_2: 'Excellent. I can start again.',
+      ivy_caught_3: 'Nobody saw. Almost.',
+      ivy_caught_4: 'I am not scared. I am just not pleased.',
+      ivy_caught_5: 'My duty is silence. I have just broken it.',
+      ivy_caught_6: 'Going back. Not smiling.',
+      ivy_caught_7: 'The crow will not wait for me.',
+      ivy_caught_8: 'Next time I will be more careful. At least in my head.',
+      run_back: 'Back to the hiding spot…',
+      checkpoint: 'Hiding spot remembered',
+      level_done: 'Floor complete',
+      m1_end_1: 'I stand before the dungeon door. Somewhere below, the scroll waits.',
+      m1_end_2: 'To be continued…',
+      m1_end_3: 'Press a key to return to the menu.'
+    }
+  };
+
+  let lang = G.save.get('lang', 'hu');
+  if (LANGS.indexOf(lang) < 0) lang = 'hu';
+
+  G.i18n = {
+    lang: lang,
+    setLang(l) {
+      if (LANGS.indexOf(l) < 0) return;
+      G.i18n.lang = l;
+      G.save.set('lang', l);
+    }
+  };
+
+  // G.t(key, vars): current language, then the other language, then the key itself.
+  // '{name}' placeholders are replaced from vars.
+  G.t = function (key, vars) {
+    const cur = G.STRINGS[G.i18n.lang] || {};
+    let s = cur[key];
+    if (s === undefined) {
+      const other = G.STRINGS[G.i18n.lang === 'hu' ? 'en' : 'hu'] || {};
+      s = other[key];
+    }
+    if (s === undefined) return key;
+    if (!vars) return s;
+    return s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? String(vars[k]) : m));
+  };
+})();

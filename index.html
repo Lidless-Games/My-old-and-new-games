@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Régi és új játékaim</title>
+<meta name="description" content="Lidless játékai: 40 éves BASIC- és assembly-játékok újra, és új játékok a böngészőben.">
+<meta name="author" content="Lidless">
+<style>
+  :root{--bg:#17131e;--panel:#241f2e;--line:#3a3247;--cream:#efe6d0;--moon:#c9cfe0;--dim:#8d93a8;--amber:#f3a03a;--bord:#8e4256;--green:#9bd35a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--cream);font-family:Georgia,'Times New Roman',serif;line-height:1.55}
+  a{color:inherit}
+  header{text-align:center;padding:56px 20px 28px}
+  h1{font-size:clamp(34px,6vw,58px);margin:0;font-weight:normal;letter-spacing:.5px}
+  h1 span{color:var(--amber)}
+  .lead{color:var(--moon);max-width:640px;margin:14px auto 0;font-style:italic}
+  main{max-width:1040px;margin:0 auto;padding:0 20px 40px}
+  h2{font-weight:normal;font-size:24px;margin:40px 0 6px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  h2 small{color:var(--dim);font-size:15px;font-style:italic;margin-left:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px;margin-top:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;text-decoration:none;transition:transform .15s,border-color .15s}
+  .card:hover,.card:focus-visible{transform:translateY(-3px);border-color:var(--amber);outline:none}
+  .thumb{aspect-ratio:16/9;width:100%;display:block;object-fit:cover;background:#0f0c14}
+  .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .title{font-size:21px}
+  .meta{font-size:13px;color:var(--dim);font-family:system-ui,sans-serif}
+  .desc{font-size:15px;color:var(--moon)}
+  .play{margin-top:auto;align-self:flex-start;font-family:system-ui,sans-serif;font-size:14px;background:var(--amber);color:#241f2e;padding:7px 16px;border-radius:999px}
+  .tag{display:inline-block;font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.4px;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--dim);margin-right:6px}
+  .tag.new{border-color:var(--bord);color:#e7a2b4}
+  footer{border-top:1px solid var(--line);color:var(--dim);font-family:system-ui,sans-serif;font-size:13px;text-align:center;padding:22px 20px 34px}
+  footer p{margin:6px auto;max-width:720px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Régi és új <span>játékaim</span></h1>
+  <p class="lead">Negyven éve BASIC-ben és assemblyben írt játékaim újjászületve, és mellettük az újak. Mind böngészőben fut, telepítés nélkül.</p>
+</header>
+<main>
+  <h2>Új játékok <small>frissen kitalálva</small></h2>
+  <div class="grid">
+    <a class="card" href="ivy-nightshade/">
+      <img class="thumb" src="ivy-nightshade/cover.jpg" alt="Ivy Nightshade a kastély folyosóján, egy kíváncsi szellem közelében" loading="lazy">
+      <div class="body">
+        <div><span class="tag new">Új</span><span class="tag">Fejlesztés alatt</span></div>
+        <div class="title">Ivy Nightshade</div>
+        <div class="meta">Lopakodós platformer · magyar / angol · billentyűzet</div>
+        <div class="desc">Ivy kétfejű varja eltűnt. Lopakodj le a családi kastélyon, hogy senki ne ébredjen fel, kerüld el a pletykás szellemeket, és ugord át a nyikorgó padlót.</div>
+        <span class="play">Játék ▸</span>
+      </div>
+    </a>
+  </div>
+
+  <h2>Régi játékok, újra <small>az eredetiek 40 évesek</small></h2>
+  <div class="grid">
+    <a class="card" href="https://claude.ai/artifact/DLcnTfWQ1kHbPsKc36webb" target="_blank" rel="noopener">
+      <svg class="thumb" viewBox="0 0 320 180" role="img" aria-label="Pókháló egy kiszabadítandó méhecskével">
+        <rect width="320" height="180" fill="#1d2a1f"/>
+        <g stroke="#cfe3c4" stroke-width="1.4" fill="none" opacity=".8">
+          <path d="M160 90 L40 20 M160 90 L280 20 M160 90 L40 160 M160 90 L280 160 M160 90 L160 8 M160 90 L160 172 M160 90 L20 90 M160 90 L300 90"/>
+          <path d="M160 50 Q195 55 200 90 Q195 125 160 130 Q125 125 120 90 Q125 55 160 50Z"/>
+          <path d="M160 28 Q222 34 230 90 Q222 146 160 152 Q98 146 90 90 Q98 34 160 28Z"/>
+        </g>
+        <circle cx="160" cy="90" r="11" fill="#f3d03a"/><path d="M151 90 h18 M152 85 h16 M152 95 h16" stroke="#3a2f20" stroke-width="2.4"/>
+        <ellipse cx="153" cy="80" rx="7" ry="5" fill="#e8f4ff" opacity=".85"/><ellipse cx="167" cy="80" rx="7" ry="5" fill="#e8f4ff" opacity=".85"/>
+        <circle cx="64" cy="34" r="8" fill="#141018"/><circle cx="256" cy="146" r="8" fill="#141018"/>
+        <circle cx="200" cy="90" r="9" fill="#f3a03a"/>
+      </svg>
+      <div class="body">
+        <div><span class="tag">Klasszikus</span></div>
+        <div class="title">Méh-mentés</div>
+        <div class="meta">Ügyességi játék · telefonon is</div>
+        <div class="desc">Járd be a pókháló minden szálát, mielőtt a pókok elkapnak. A végén egy beragadt méhecske vár szabadításra.</div>
+        <span class="play">Játék ▸</span>
+      </div>
+    </a>
+    <a class="card" href="https://claude.ai/artifact/FWXpRQThCTMx5qfJAWLkhW" target="_blank" rel="noopener">
+      <svg class="thumb" viewBox="0 0 320 180" role="img" aria-label="Lehulló almák és egy lavór">
+        <rect width="320" height="180" fill="#20304a"/>
+        <rect y="140" width="320" height="40" fill="#3b5230"/>
+        <path d="M0 60 Q80 20 160 40 T320 30 V0 H0Z" fill="#2f4a2a"/>
+        <g><circle cx="90" cy="70" r="10" fill="#c8323c"/><circle cx="170" cy="40" r="10" fill="#7fbf3f"/><circle cx="235" cy="88" r="10" fill="#e6b830"/>
+        <path d="M90 60 v-5 M170 30 v-5 M235 78 v-5" stroke="#3f281f" stroke-width="2"/></g>
+        <path d="M120 140 L200 140 L190 160 L130 160Z" fill="#9aa3b8"/><ellipse cx="160" cy="140" rx="40" ry="6" fill="#c9cfe0"/>
+        <path d="M262 52 q8 -8 16 0 q8 -8 16 0" stroke="#141018" stroke-width="3" fill="none"/>
+      </svg>
+      <div class="body">
+        <div><span class="tag">Klasszikus</span></div>
+        <div class="title">Almaszedés</div>
+        <div class="meta">Ügyességi játék</div>
+        <div class="desc">Kapd el a lavórral a lehulló almákat, és vigyázz a madárra!</div>
+        <span class="play">Játék ▸</span>
+      </div>
+    </a>
+  </div>
+</main>
+<footer>
+  <p>© 2026 Lidless · A játékok a <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.hu" rel="license noopener" target="_blank">CC BY-NC 4.0</a> licenc alatt szabadon megoszthatók, a szerző feltüntetésével, nem kereskedelmi célra.</p>
+  <p>Az oldal nem gyűjt személyes adatot. A játékok csak a beállításokat és a haladást mentik, a saját böngésződbe.</p>
+</footer>
+</body>
+</html>
