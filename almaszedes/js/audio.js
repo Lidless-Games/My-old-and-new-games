@@ -1,49 +1,16 @@
-// AS.Audio – hangfájlok (assets/snd) + WebAudio-szintetizált hangok. Minden hívás try/catch-ben.
+// AS.Audio – minden hang és a zene WebAudio-val, kódból generálva (nincs hangfájl). Minden hívás try/catch-ben.
 (function (root) {
   const AS = (root.AS = root.AS || {});
-  const DIR = 'assets/snd/';
-
-  // fájlos hangok: hangerő, minimális ismétlési köz (mp) – a fall/wing ne halmozódjon
-  const FILES = {
-    fall:   { src: 'fall.mp3',   vol: 0.35, gap: 0.12, pool: 3 },
-    catch:  { src: 'catch.mp3',  vol: 0.8,  gap: 0.04, pool: 3 },
-    miss:   { src: 'miss.mp3',   vol: 0.8,  gap: 0.08, pool: 2 },
-    shot:   { src: 'shot.mp3',   vol: 0.8,  gap: 0.1,  pool: 2 },
-    squawk: { src: 'squawk.mp3', vol: 0.7,  gap: 0.4,  pool: 2 },
-    wing:   { src: 'wing.mp3',   vol: 0.3,  gap: 0.35, pool: 2 },
-  };
-  // szintetizált hangok minimális ismétlési köze
-  const SYNTH_GAP = { bonus: 0.1, worm: 0.1, levelup: 0.5, combo: 0.15, gameover: 1, shoo: 0.2, clap: 0.05, flutter: 0.2, steal: 0.3, wind: 2.5, click: 0.04 };
+  // minimális ismétlési köz (mp) – a fall/wing ne halmozódjon
+  const SYNTH_GAP = { fall: 0.12, catch: 0.04, miss: 0.08, shot: 0.1, squawk: 0.4, wing: 0.35, bonus: 0.1, worm: 0.1, levelup: 0.5, combo: 0.15, gameover: 1, shoo: 0.2, clap: 0.05, flutter: 0.2, steal: 0.3, wind: 2.5, click: 0.04 };
 
   let sfxOn = true, musicOn = true, unlocked = false, suspended = false;
-  let ctx = null, master = null, noiseBuf = null, music = null;
-  const pools = {};
+  let ctx = null, master = null, noiseBuf = null, musicGain = null, musicTimer = null, nextNote = 0, step = 0;
   const lastPlayed = {};
 
   function nowSec() { return (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000; }
 
-  function init() {
-    try {
-      if (typeof Audio === 'undefined') return;
-      for (const k in FILES) {
-        if (pools[k]) continue;
-        const f = FILES[k];
-        pools[k] = { i: 0, list: [] };
-        for (let n = 0; n < f.pool; n++) {
-          const a = new Audio(DIR + f.src);
-          a.preload = 'auto';
-          a.volume = f.vol;
-          pools[k].list.push(a);
-        }
-      }
-      if (!music) {
-        music = new Audio(DIR + 'music.mp3');
-        music.loop = true;
-        music.preload = 'auto';
-        music.volume = 0.5;
-      }
-    } catch (e) { /* hang nélkül is megy */ }
-  }
+  function init() { /* nincs előtöltendő fájl */ }
 
   function ensureCtx() {
     if (ctx) return ctx;
@@ -54,6 +21,9 @@
       master = ctx.createGain();
       master.gain.value = 0.5;
       master.connect(ctx.destination);
+      musicGain = ctx.createGain();
+      musicGain.gain.value = 0;
+      musicGain.connect(master);
       const len = Math.floor(ctx.sampleRate * 1.2);
       noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
       const d = noiseBuf.getChannelData(0);
@@ -73,15 +43,44 @@
     } catch (e) { /* ignore */ }
   }
 
+  // ---- generált zene: vidám, könnyed dúr dallam pengetős hangszínnel, 8 ütemes körforgás ----
+  const BPM = 112, STEP = 60 / BPM / 2; // nyolcadok
+  const MEL = [ // 64 nyolcad; 0 = szünet (MIDI hangmagasság)
+    72,0,76,79, 77,76,74,0, 72,0,74,76, 74,72,71,0,
+    69,0,72,76, 74,72,71,72, 74,0,71,67, 69,71,72,0,
+    72,0,76,79, 81,79,77,76, 77,0,74,77, 76,74,72,0,
+    69,72,71,69, 67,0,71,74, 72,0,67,64, 60,0,0,0 ];
+  const BASS = [48, 45, 41, 43, 48, 45, 43, 48]; // ütemenként (C a F G C a G C)
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  function pluck(t, freq, vol, dur, type) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    f.type = 'lowpass'; f.frequency.setValueAtTime(freq * 6, t); f.frequency.exponentialRampToValueAtTime(freq * 1.5, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g); g.connect(musicGain); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function scheduleMusic() {
+    if (!ctx) return;
+    while (nextNote < ctx.currentTime + 0.15) {
+      const i = step % 64, bar = Math.floor(i / 8);
+      if (MEL[i]) pluck(nextNote, mtof(MEL[i]), 0.16, STEP * 1.6, 'triangle');
+      if (i % 8 === 0) pluck(nextNote, mtof(BASS[bar] - 12), 0.22, STEP * 3.5, 'sine');
+      if (i % 8 === 4) pluck(nextNote, mtof(BASS[bar] - 5), 0.12, STEP * 2.5, 'sine');
+      if (i % 2 === 1) { // halk pengetett kíséret
+        [0, 4, 7].forEach((d) => pluck(nextNote, mtof(BASS[bar] + 12 + d), 0.035, STEP * 0.9, 'square'));
+      }
+      nextNote += STEP; step++;
+    }
+  }
   function applyMusic() {
     try {
-      if (!music) return;
-      if (unlocked && musicOn && !suspended) {
-        const p = music.play();
-        if (p && p.catch) p.catch(() => {});
-      } else {
-        music.pause();
-      }
+      if (!ensureCtx()) return;
+      const on = unlocked && musicOn && !suspended;
+      const t = ctx.currentTime;
+      musicGain.gain.cancelScheduledValues(t);
+      musicGain.gain.setTargetAtTime(on ? 0.55 : 0, t, 0.15);
+      if (on && !musicTimer) { nextNote = ctx.currentTime + 0.05; musicTimer = setInterval(scheduleMusic, 30); }
+      if (!on && musicTimer) { clearInterval(musicTimer); musicTimer = null; }
     } catch (e) { /* ignore */ }
   }
 
@@ -91,7 +90,7 @@
   // a lap háttérbe kerülésekor / visszatértekor
   function suspend() {
     suspended = true;
-    try { if (music) music.pause(); } catch (e) { /* ignore */ }
+    try { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } } catch (e) { /* ignore */ }
     try { if (ctx && ctx.state === 'running') ctx.suspend(); } catch (e) { /* ignore */ }
   }
   function resume() {
@@ -147,6 +146,18 @@
     s.start(t0, Math.random() * 0.8); s.stop(t0 + dur + 0.03);
   }
   const SYNTH = {
+    // lehulló alma: halk, lefelé csúszó fütty
+    fall()     { tone(1200, 0.28, 'sine', 0.06, 0, 500); },
+    // elkapás: puha koppanás + kis vidám csilingelés
+    catch()    { burst(0.06, 0.5, 500, 1.5, 0); tone(988, 0.1, 'triangle', 0.22, 0.02); tone(1319, 0.14, 'triangle', 0.2, 0.08); },
+    // leesett alma: tompa puffanás
+    miss()     { tone(160, 0.22, 'sine', 0.4, 0, 70); burst(0.12, 0.35, 300, 1.2, 0); },
+    // lövés: rövid pukkanás
+    shot()     { burst(0.12, 1.0, 1800, 0.9, 0, 400); tone(220, 0.12, 'square', 0.12, 0, 60); },
+    // madár-rikoltás: két éles, ereszkedő kárrogás
+    squawk()   { [0, 0.16].forEach((d) => { tone(900, 0.13, 'sawtooth', 0.14, d, 520); burst(0.1, 0.25, 1400, 3, d); }); },
+    // szárnycsapás: két puha suhogás
+    wing()     { burst(0.09, 0.35, 700, 1.0, 0, 400); burst(0.09, 0.3, 650, 1.0, 0.14, 380); },
     // két éles tapsolás ~110 ms különbséggel
     clap()     {
       [0, 0.11].forEach((d) => {
@@ -172,17 +183,9 @@
     try {
       if (!sfxOn || !unlocked || suspended) return;
       const t = nowSec();
-      const gap = FILES[name] ? FILES[name].gap : (SYNTH_GAP[name] || 0);
+      const gap = SYNTH_GAP[name] || 0;
       if (!force && lastPlayed[name] !== undefined && t - lastPlayed[name] < gap) return;
       lastPlayed[name] = t;
-      const pool = pools[name];
-      if (pool) {
-        const a = pool.list[pool.i++ % pool.list.length];
-        try { a.currentTime = 0; } catch (e) { /* ignore */ }
-        const p = a.play();
-        if (p && p.catch) p.catch(() => {});
-        return;
-      }
       if (SYNTH[name]) {
         if (!ensureCtx()) return;
         if (ctx.state === 'suspended') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); }
