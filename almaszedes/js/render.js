@@ -41,8 +41,7 @@
   function load(onProgress) {
     if (loadPromise) return loadPromise;
     // photo mode: AI-generated photos (own assets); the bird is the drawn one
-    const names = ['bg.jpg', 'bg_flash.jpg', 'apple_red.png', 'apple_green.png', 'apple_gold.png', 'shadow.png'];
-    for (let i = 0; i < 4; i++) names.push('basin' + i + '.png');
+    const names = []; // photo mode switched off on main until the foto-mod branch is ready
     const total = names.length + 1;
     let done = 0;
     const imgs = {};
