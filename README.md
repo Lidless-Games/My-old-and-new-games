@@ -1,6 +1,6 @@
 # Régi és új játékaim
 
-Lidless játékai a böngészőben: negyven éve BASIC-ben és assemblyben írt játékok újra, és új játékok.
+Lidless játékai a böngészőben: klasszikus ötletek új köntösben és vadonatúj kalandok.
 
 | Játék | Mappa |
 |---|---|
