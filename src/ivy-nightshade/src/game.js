@@ -22,7 +22,7 @@
       this.tt += dt;
       if (this.tt > 0.4 && (G.input.pressed('confirm') || G.input.pressed('action') || G.input.pressed('jump'))) {
         sfx('ui_ok'); this.page++; this.tt = 0;
-        if (this.page >= 4) this.onDone();
+        if (this.page >= 5) this.onDone();
       }
       if (G.input.pressed('back')) this.onDone();
     }
@@ -36,7 +36,7 @@
         G.art.drawDeco(ctx, 650, floorY, { kind: 'perch', t: G.time });
         G.art.drawDeco(ctx, 480, floorY - 150, { kind: 'window', t: G.time });
         G.art.drawIvy(ctx, 560, floorY, { state: 'idle', facing: 1, t: G.time, speed: 0 });
-        if (this.page < 4) G.art.drawBubble(ctx, 560, floorY - 58, t('story_' + (this.page + 1)), { who: 'ivy' });
+        if (this.page < 5) G.art.drawBubble(ctx, 560, floorY - 58, t('story_' + (this.page + 1)), { who: 'ivy' });
         G.art.drawLight(ctx, 566, floorY - 40, G.time, 0.55);
       }
       screenText(ctx, [t('press_any')], 515, 14, 0.5 + 0.3 * Math.sin(G.time * 3));
@@ -86,7 +86,7 @@
       });
       const ex = this.world.entPos(L.exit);
       this.door = { x: ex.x, y: ex.y, rect: { x: ex.x - T * 0.6, y: ex.y - T * 2.2, w: T * 1.2, h: T * 2.2 } };
-      this.mode = 'intro'; this.tt = 0; this.bubbles = []; this.toast = null; this.paused = null;
+      this.mode = 'intro'; this.tt = 0; this.levelT = 0; this.playStart = null; this.bubbles = []; this.toast = null; this.paused = null;
       this.elapsed = 0;
       this.player.control = false;
       G.events.on('caught', (d) => this.beginCaught(d));
@@ -105,7 +105,7 @@
       if (this.mode !== 'play') return;
       this.caughtCount = (this.caughtCount || 0) + 1;
       this.mode = 'caught'; this.tt = 0;
-      this.stealth.paused = true; this.traps.paused = true; if (this.ghosts) this.ghosts.paused = true;
+      this.stealth.paused = true; this.traps.paused = d.by !== 'trap'; if (this.ghosts) this.ghosts.paused = true;
       const p = this.player;
       p.control = false;
       sfx('caught');
@@ -143,6 +143,9 @@
       this.tt += dt;
       const p = this.player, c = this.cs, tt = this.tt, ivy = c.ivy;
       const headX = () => ivy.x + c.dir * 24;
+      if (!this.traps.paused) { // after a trap death the trap finishes its move, then switches off
+        if (tt < CFG.TRAP_OFF_DELAY) this.traps.update(dt); else this.traps.paused = true;
+      }
       if (tt < c.t1) { ivy.state = 'frozen'; p.state = 'frozen'; return; }
       if (c.kind === 'run' && tt < c.t4) { // comic dash back to the hiding spot
         if (!c.dragStarted) { c.dragStarted = true; sfx('whoosh'); this.toast = { text: t('run_back'), tt: c.run }; }
@@ -198,6 +201,15 @@
       this.mode = 'play';
       this.say(p.x, p.y - 56, c.line, 'ivy', 2.6);
       this.cs = null;
+    }
+
+    // first ghost in sight: Ivy reminds the player that ghosts can't see her while she stands still
+    ghostTip(p) {
+      if (G.game._ghostTipDone || this.mode !== 'play' || !this.ghosts || !this.ghosts.ghosts) return;
+      if (this.ghosts.ghosts.some((g) => Math.abs(g.x - p.x) < ((g.view || 6) + 4) * T && Math.abs(g.y - p.y) < 3 * T)) {
+        G.game._ghostTipDone = true;
+        this.say(p.x, p.y - 56, t('ivy_ghost_tip'), 'ivy', 4.5); this.bubbles[0].follow = true;
+      }
     }
 
     // path back to the checkpoint = breadcrumb trail reversed (falls back to a straight line)
@@ -296,15 +308,17 @@
         if (this.paused.reset) this.paused.reset();
         return;
       }
-      this.tt += dt;
+      this.tt += dt; this.levelT += dt;
       const p = this.player;
+      this.bubbles.forEach((b) => { if (b.follow) { b.x = p.x; b.y = p.y - 56; } });
+      this.ghostTip(p);
+      if (this.playStart != null && !this._introSaid && this.levelT > this.playStart + 0.45) { // Ivy's opening line, after the title card
+        this._introSaid = true;
+        this.say(p.x, p.y - 56, t(this.level.introKey), 'ivy', 5); this.bubbles[0].follow = true;
+      }
       if (this.mode === 'intro') {
         p.update(dt);
-        if (this.tt > 0.3 && this.bubbles.length === 0 && !this._introSaid) {
-          this._introSaid = true;
-          this.say(p.x, p.y - 56, t(this.level.introKey), 'ivy', 3.5);
-        }
-        if (this.tt > 2.2 || (this.tt > 0.6 && G.input.anyPressed())) { this.mode = 'play'; p.control = true; }
+        if (this.tt > 2.2 || (this.tt > 0.6 && G.input.anyPressed())) { this.mode = 'play'; p.control = true; this.playStart = this.levelT; }
       } else if (this.mode === 'play') {
         this.elapsed += dt;
         p.update(dt);
@@ -383,8 +397,9 @@
       ctx.restore();
       G.ui.drawHUD(ctx, { alert: this.stealth.maxAlert(), hint: this.hint(), levelName: t(this.level.nameKey) });
       if (this.toast) screenText(ctx, [this.toast.text], 90, 18, U.clamp(this.toast.tt * 2, 0, 1));
-      if (this.mode === 'intro' || (this.mode === 'play' && this.tt < 3)) {
-        const a = this.mode === 'intro' ? U.clamp(this.tt * 3, 0, 1) : U.clamp(1 - (this.tt - 2.2), 0, 1);
+      const cardEnd = this.playStart == null ? 99 : this.playStart + 0.4; // the title card fades once play starts
+      if ((this.mode === 'intro' || this.mode === 'play') && this.levelT < cardEnd) {
+        const a = Math.min(U.clamp(this.levelT * 3, 0, 1), this.playStart == null ? 1 : U.clamp((cardEnd - this.levelT) / 0.4, 0, 1));
         if (a > 0) G.art.drawCard(ctx, t(this.level.nameKey), '', a);
       }
       if (this.mode === 'done') G.art.drawCard(ctx, t('level_done'), t(this.level.nameKey), U.clamp(this.tt * 2, 0, 1));

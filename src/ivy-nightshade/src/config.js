@@ -13,7 +13,7 @@ window.G.CFG = {
   // chandelier / crouch
   CROUCH_H: 32, CHANDELIER_AMP_DEG: 22, CHANDELIER_CLEAR: 36,
   // caught sequence (seconds)
-  CAUGHT_FREEZE: 3.5, CAUGHT_FALL: 0.8, SPIDER_DESCEND: 1.4, DRAG_SPEED: 110, DRAG_MAX: 5, GETUP_TIME: 2.4, RUN_BACK_SPEED: 210,
+  CAUGHT_FREEZE: 3.5, CAUGHT_FALL: 0.8, SPIDER_DESCEND: 1.4, DRAG_SPEED: 110, DRAG_MAX: 5, GETUP_TIME: 2.4, TRAP_OFF_DELAY: 0.7, RUN_BACK_SPEED: 210,
   PAL: {
     plum: '#241f2e', plumDeep: '#17131e', plumLight: '#3a3247', bordeaux: '#6b2e3e', bordeauxLight: '#8e4256',
     moon: '#c9cfe0', moonDim: '#8d93a8', skin: '#f2ece4', ink: '#141018', amber: '#f3a03a', amberLight: '#f7c873',
