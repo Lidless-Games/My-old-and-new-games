@@ -41,9 +41,7 @@
 
   function load(onProgress) {
     if (loadPromise) return loadPromise;
-    const names = ['bg.jpg', 'bg_flash.jpg', 'apple_red.png', 'apple_green.png', 'apple_gold.png', 'shadow.png'];
-    for (let i = 0; i < 4; i++) names.push('basin' + i + '.png');
-    for (let i = 1; i <= 9; i++) names.push('bird' + i + '.png');
+    const names = []; // web version: drawn (cartoon) graphics only, no photo assets
     const total = names.length + 1;
     let done = 0;
     const imgs = {};

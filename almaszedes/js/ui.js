@@ -16,7 +16,7 @@
     set(k, v) { mem[k] = v; try { root.localStorage.setItem(k, v); } catch (e) { /* ignore */ } },
   };
 
-  const DEFAULTS = { difficulty: 'normal', graphics: 'photo', birdMode: 'shoot', music: true, sfx: true, name: '', padSide: 'left', padSpeed: 'mid', touchMode: 'drag' };
+  const DEFAULTS = { difficulty: 'normal', graphics: 'cartoon', birdMode: 'shoot', music: true, sfx: true, name: '', padSide: 'left', padSpeed: 'mid', touchMode: 'drag' };
   let settings = Object.assign({}, DEFAULTS);
   // érintős pad: állandó sebesség (a billentyűzetes teljes sebesség hányada)
   const PAD_SPEED = { slow: 0.4, mid: 0.55, fast: 0.75 };
@@ -26,7 +26,7 @@
       const o = JSON.parse(store.get(SET_KEY) || 'null');
       if (o && typeof o === 'object') {
         if (DIFF_NAME[o.difficulty]) settings.difficulty = o.difficulty;
-        if (o.graphics === 'photo' || o.graphics === 'cartoon') settings.graphics = o.graphics;
+        settings.graphics = 'cartoon';
         if (o.birdMode === 'shoot' || o.birdMode === 'shoo') settings.birdMode = o.birdMode;
         if (typeof o.music === 'boolean') settings.music = o.music;
         if (typeof o.sfx === 'boolean') settings.sfx = o.sfx;
@@ -274,7 +274,6 @@
     if (fullscreenSupported()) toggles.appendChild(fsBtn);
     const right = h('div', { class: 'settings' },
       seg('Nehézség', 'difficulty', DIFFS),
-      seg('Grafika', 'graphics', [['photo', 'Fotós'], ['cartoon', 'Rajzfilmes']]),
       seg('Madár', 'birdMode', [['shoot', 'Lelövés'], ['shoo', 'Elhessegetés']]),
       h('div', { class: 'touch-row touch-only' },
         seg('Irányítás', 'touchMode', [['drag', 'Húzás'], ['pad', 'Folt']]),
