@@ -171,12 +171,17 @@
     s.start(t0, Math.random() * 0.8); s.stop(t0 + dur + 0.03);
   }
   const SYNTH = {
-    // lehulló alma: halk, lefelé csúszó fütty
-    fall()     { tone(1200, 0.28, 'sine', 0.06, 0, 500); },
-    // elkapás: puha koppanás + kis vidám csilingelés
-    catch()    { burst(0.06, 0.5, 500, 1.5, 0); tone(988, 0.1, 'triangle', 0.22, 0.02); tone(1319, 0.14, 'triangle', 0.2, 0.08); },
-    // leesett alma: tompa puffanás
-    miss()     { tone(160, 0.22, 'sine', 0.4, 0, 70); burst(0.12, 0.35, 300, 1.2, 0); },
+    fall()     {
+      // levélzizzenés (az alma leválik az ágról) + jól hallható, lefelé csúszó fütty
+      burst(0.14, 0.32, 2600, 1.4, 0, 1500);
+      burst(0.08, 0.22, 1800, 1.8, 0.05);
+      tone(1150, 0.34, 'sine', 0.2, 0.03, 420);
+      tone(2300, 0.2, 'sine', 0.05, 0.03, 900);
+    },
+    // elkapás: kongó puffanás a lavórban + kis vidám csilingelés
+    catch()    { tone(160, 0.22, 'sine', 0.4, 0, 70); burst(0.12, 0.35, 300, 1.2, 0); tone(988, 0.1, 'triangle', 0.22, 0.06); tone(1319, 0.14, 'triangle', 0.2, 0.12); },
+    // leesett alma: rövid, tompa koppanás a füvön
+    miss()     { burst(0.06, 0.5, 500, 1.5, 0); burst(0.1, 0.25, 260, 1.0, 0.01); },
     // lövés: rövid pukkanás
     shot()     { burst(0.12, 1.0, 1800, 0.9, 0, 400); tone(220, 0.12, 'square', 0.12, 0, 60); },
     // madár-rikoltás: két éles, ereszkedő kárrogás

@@ -7,8 +7,9 @@
     W: 1900, H: 850,                 // logikai vászon; minden koordináta ebben értendő
 
     // --- mélység (d: 0 = távol/kicsi, 1 = közel/nagy) ---
-    groundY: (d) => 470 + 300 * d,   // az alma KÖZÉPPONTJA itt ér földet
-    scale: (d) => 0.2 + 0.5 * d,     // sprite-méretszorzó adott mélységben
+    // a legtávolabbi sáv közelebb hozva (régen 470 / 0.2 – túl apró volt); a legközelebbi sáv változatlan (770 / 0.7)
+    groundY: (d) => 525 + 245 * d,   // az alma KÖZÉPPONTJA itt ér földet
+    scale: (d) => 0.34 + 0.36 * d,   // sprite-méretszorzó adott mélységben
 
     // --- sprite alapméretek (px, scale = 1 mellett) ---
     APPLE_SIZE: 134,
