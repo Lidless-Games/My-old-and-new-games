@@ -72,7 +72,7 @@ window.G.CFG = {
     ArrowUp: ['up', 'jump'], KeyW: ['up', 'jump'], ArrowDown: ['down'], KeyS: ['down'],
     Space: ['jump', 'confirm'], ShiftLeft: ['sneak'], ShiftRight: ['sneak'],
     KeyE: ['action'], Enter: ['action', 'confirm'], NumpadEnter: ['action', 'confirm'],
-    Escape: ['pause', 'back'], KeyP: ['pause'], Backspace: ['back'],
+    Escape: ['pause', 'back'], KeyP: ['pause'], Backspace: ['back'], KeyM: ['map'], Tab: ['map'],
   };
   const held = {}, prevHeld = {}, keyCount = {};
   let anyPress = false, anyPressFrame = false;
@@ -96,7 +96,7 @@ window.G.CFG = {
   window.addEventListener('pagehide', resetKeys);
   ['pointerdown', 'touchstart'].forEach((ev) => window.addEventListener(ev, () => { anyPress = true; if (G.rhythm && G.rhythm.unlock) G.rhythm.unlock(); }, { passive: true }));
 
-  const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'sneak', 'action', 'pause', 'confirm', 'back'];
+  const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'sneak', 'action', 'pause', 'confirm', 'back', 'map'];
   G.input = {
     virtual,
     down: (a) => !!held[a],
@@ -193,6 +193,11 @@ window.G.CFG = {
       menu_lang: 'Nyelv',
       menu_music: 'Zene',
       menu_hints: 'Tippek',
+      map_title: 'Az iskola térképe',
+      map_hint: 'M – térkép',
+      ivy_locked_green: 'Zárva. A zöld kulcs kellene hozzá. Valahol biztosan megtalálom.',
+      ivy_locked_blue: 'Zárva. A kék kulcs kellene hozzá. Valahol biztosan megtalálom.',
+      ivy_locked_red: 'Zárva. A piros kulcs kellene hozzá. Valahol biztosan megtalálom.',
       ghost_leave_1: 'Vaklárma, leléptem.',
       ghost_leave_2: 'Ennyi volt? Unalmas. Mentem.',
       ghost_leave_3: 'Na jó, én hazaúszom.',
@@ -284,13 +289,13 @@ window.G.CFG = {
       room_cellar: 'Pince',
       room_tower: 'Harangtorony',
       hint_door: '↓ / E – belépés',
-      hint_locked_red: 'Zárva – piros kulcs kell',
-      hint_locked_blue: 'Zárva – kék kulcs kell',
-      hint_locked_green: 'Zárva – zöld kulcs kell',
+      hint_locked_red: 'Zárva – a piros kulcs kell hozzá. Keresd meg valahol az iskolában!',
+      hint_locked_blue: 'Zárva – a kék kulcs kell hozzá. Keresd meg valahol az iskolában!',
+      hint_locked_green: 'Zárva – a zöld kulcs kell hozzá. Keresd meg valahol az iskolában!',
       hint_candy_give: 'E – cukorka odaadása',
       hint_janitor: 'Iskolaőr! Ő mozdulatlanul is lát – bújj el!',
       caught_janitor: 'Hohó! Éjjel nincs szünet! Marsz vissza az ágyba, kisasszony!',
-      ivy_home_wake: 'Az ágyam. Ez nem a büntetés. Ez a kényelmes fajta.',
+      ivy_home_wake: 'Itthon ébredtem, az ágyam mellett. Még szerencse, hogy a tekercs még megvan.',
       ivy_back_school: 'Újra itt. A térképre emlékszem. De a varjú azóta máshova is repülhetett, a bejárt helyeket is újra meg kell néznem.',
       ending_line: 'Ez kész… és most hogy jutunk haza?',
       end_final_1: 'Megvan a varjú. És a családja.',
@@ -304,6 +309,11 @@ window.G.CFG = {
       menu_lang: 'Language',
       menu_music: 'Music',
       menu_hints: 'Hints',
+      map_title: 'Map of the school',
+      map_hint: 'M – map',
+      ivy_locked_green: 'Locked. It needs the green key. It must be somewhere around here.',
+      ivy_locked_blue: 'Locked. It needs the blue key. It must be somewhere around here.',
+      ivy_locked_red: 'Locked. It needs the red key. It must be somewhere around here.',
       ghost_leave_1: 'False alarm, I\'m off.',
       ghost_leave_2: 'That\'s it? Boring. Bye.',
       ghost_leave_3: 'Right, I\'m floating home.',
@@ -395,13 +405,13 @@ window.G.CFG = {
       room_cellar: 'Cellar',
       room_tower: 'Bell Tower',
       hint_door: '↓ / E – enter',
-      hint_locked_red: 'Locked – you need the red key',
-      hint_locked_blue: 'Locked – you need the blue key',
-      hint_locked_green: 'Locked – you need the green key',
+      hint_locked_red: 'Locked – it needs the red key. Search the school for it!',
+      hint_locked_blue: 'Locked – it needs the blue key. Search the school for it!',
+      hint_locked_green: 'Locked – it needs the green key. Search the school for it!',
       hint_candy_give: 'E – give candy',
       hint_janitor: 'Janitor! He sees you even if you stand still – hide!',
       caught_janitor: 'Aha! No break-ins after lights out! Back to bed with you, young lady!',
-      ivy_home_wake: 'My bed. This is not the punishment. This is the comfortable kind.',
+      ivy_home_wake: 'Woke up at home, next to my bed. Lucky the scroll is still here.',
       ivy_back_school: 'Back again. I remember the map. But the crow may have flown somewhere else since, so I must check the places I have already seen.',
       ending_line: 'Well, that\'s done… now how do we get home?',
       end_final_1: 'I found the crow. And his family.',
@@ -7899,6 +7909,8 @@ window.G.CFG = {
   }
 
   // ---------------- Play ----------------
+  const HOME_END = 9.8; // length of the janitor 'sent home' sequence (s)
+
   class PlayScene {
     constructor(index) { this.index = index; this.level = G.LEVELS[index]; }
     enter() {
@@ -7931,6 +7943,7 @@ window.G.CFG = {
       this.player.control = false;
       G.events.on('caught', (d) => this.beginCaught(d));
       G.events.on('door_open', () => { this.toast = { text: t('door_open'), tt: 2.5 }; sfx('door'); });
+      G.events.on('locked', (d) => { const p = this.player; if (!this.bubbles.length) { this.say(p.x, p.y - 56, t('ivy_locked_' + d.color), 'ivy', 3.5); this.bubbles[0].follow = true; } });
       G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
       G.events.on('ghost_summoned', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_wrong_candles'), 'ivy', 3); this.bubbles[0].follow = true; });
       G.events.on('checkpoint', (d) => { this.toast = { text: t('checkpoint'), tt: 2 }; this.trail = [{ x: d.x, y: d.y, st: 'idle' }]; });
@@ -8114,26 +8127,65 @@ window.G.CFG = {
       return { x: U.lerp(a.x, b.x, k), y: U.lerp(a.y, b.y, k), st: b.st, dir };
     }
 
-    drawMinimap(ctx) { // visited rooms only, top-right
-      const m = this.school.minimap ? this.school.minimap() : null; if (!m || !m.rooms.length) return;
-      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-      for (const r of m.rooms) { x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y); x1 = Math.max(x1, r.x + r.w); y1 = Math.max(y1, r.y + r.h); }
-      const BW = 190, BH = 110, sc = Math.min(BW / (x1 - x0), BH / (y1 - y0)), ox = CFG.VIEW_W - BW - 16, oy = 14;
-      ctx.save();
-      ctx.fillStyle = 'rgba(20,16,26,0.55)'; ctx.fillRect(ox - 6, oy - 6, BW + 12, BH + 12);
-      for (const r of m.rooms) {
-        if (!r.visited) continue;
-        ctx.fillStyle = r.current ? 'rgba(243,160,58,0.55)' : 'rgba(201,207,224,0.28)';
-        ctx.fillRect(ox + (r.x - x0) * sc, oy + (r.y - y0) * sc, Math.max(2, r.w * sc - 1), Math.max(2, r.h * sc - 1));
+    doorNumbers() { // the two ends of a connection share a number: "door 3 here leads to door 3 there"
+      if (this._doorNum) return this._doorNum;
+      const m = new Map(); let n = 0;
+      for (const d of this.school.portals) {
+        if (m.has(d.id)) continue;
+        n++; m.set(d.id, n); if (d.to) m.set(d.to, n);
       }
-      for (const d of m.portals || []) {
-        if (d.visible === false) continue;
-        if (!m.rooms.some((r) => r.visited && d.x >= r.x && d.x <= r.x + r.w && d.y >= r.y && d.y <= r.y + r.h)) continue; // only doors of explored rooms
-        ctx.fillStyle = d.locked ? ({ red: '#d0485a', blue: '#5a8ad8', green: '#6cbf5a' }[d.color] || '#d0485a') : '#efe6d0';
-        ctx.fillRect(ox + (d.x - x0) * sc - 1.5, oy + (d.y - y0) * sc - 1.5, 3, 3);
+      return (this._doorNum = m);
+    }
+    drawMinimap(ctx, big) { // explored rooms with their names, numbered door pairs, Ivy; M opens the big map
+      const S = this.school, rooms = S.rooms || []; if (!rooms.length) return;
+      const nums = this.doorNumbers();
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (const r of rooms) { x0 = Math.min(x0, r.tx); y0 = Math.min(y0, r.ty); x1 = Math.max(x1, r.tx + r.w); y1 = Math.max(y1, r.ty + r.h); }
+      const BW = big ? 820 : 300, BH = big ? 430 : 170;
+      const sc = Math.min(BW / (x1 - x0), BH / (y1 - y0));
+      const mw = (x1 - x0) * sc, mh = (y1 - y0) * sc;
+      const ox = big ? (CFG.VIEW_W - mw) / 2 : CFG.VIEW_W - mw - 14, oy = big ? (CFG.VIEW_H - mh) / 2 + 10 : 12;
+      const X = (tx) => ox + (tx - x0) * sc, Y = (ty) => oy + (ty - y0) * sc;
+      const cur = S.room ? S.room.id : null;
+      ctx.save();
+      ctx.fillStyle = big ? 'rgba(14,11,20,0.9)' : 'rgba(20,16,26,0.62)';
+      if (big) ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H); else ctx.fillRect(ox - 7, oy - 7, mw + 14, mh + 26);
+      if (big) { ctx.fillStyle = CFG.PAL.cream; ctx.font = '22px Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(t('map_title'), CFG.VIEW_W / 2, oy - 16); }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const r of rooms) {
+        if (!S.visited.has(r.id)) continue;
+        ctx.fillStyle = r.id === cur ? 'rgba(243,160,58,0.42)' : 'rgba(201,207,224,0.18)';
+        ctx.strokeStyle = 'rgba(239,230,208,0.55)'; ctx.lineWidth = 1;
+        ctx.fillRect(X(r.tx), Y(r.ty), r.w * sc, r.h * sc); ctx.strokeRect(X(r.tx) + 0.5, Y(r.ty) + 0.5, r.w * sc - 1, r.h * sc - 1);
+        ctx.fillStyle = CFG.PAL.cream; ctx.font = (big ? 16 : 10) + 'px Georgia, serif';
+        ctx.fillText(t(r.nameKey), X(r.tx + r.w / 2), Y(r.ty) + (big ? 16 : 8));
+      }
+      const COL = { red: '#d0485a', blue: '#5a8ad8', green: '#6cbf5a' };
+      for (const d of S.portals) {
+        const inVisited = rooms.some((r) => S.visited.has(r.id) && d.tx >= r.tx && d.tx < r.tx + r.w && d.ty >= r.ty && d.ty < r.ty + r.h);
+        if (!inVisited) continue;
+        const locked = S.isLocked ? S.isLocked(d) : false, cx = X(d.tx + 0.5), cy = Y(d.ty + 0.2), rad = big ? 10 : 6;
+        ctx.fillStyle = locked ? COL[d.lock] || '#d0485a' : '#efe6d0';
+        ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = locked ? '#fff' : '#241f2e'; ctx.font = 'bold ' + (big ? 12 : 8) + 'px sans-serif';
+        ctx.fillText(String(nums.get(d.id) || ''), cx, cy + 0.5);
       }
       const p = this.player, T_ = CFG.TILE;
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ox + (p.x / T_ - x0) * sc, oy + (p.y / T_ - 0.7 - y0) * sc, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = '#241f2e'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(X(p.x / T_), Y(p.y / T_ - 0.7), big ? 5 : 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      if (!big) { ctx.fillStyle = 'rgba(239,230,208,0.7)'; ctx.font = '10px Georgia, serif'; ctx.fillText(t('map_hint'), ox + mw / 2, oy + mh + 10); }
+      ctx.restore();
+    }
+    drawDoorPlaques(ctx, cam) { // the door's pair number on a little plaque above every door in the world
+      const nums = this.doorNumbers();
+      ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const d of this.school.portals) {
+        if (d.x < cam.x - 60 || d.x > cam.x + CFG.VIEW_W + 60) continue;
+        const x = d.x, y = d.y - 3.15 * CFG.TILE;
+        ctx.fillStyle = '#efe6d0'; ctx.strokeStyle = '#5a3b2e'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#241f2e'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(String(nums.get(d.id) || ''), x, y + 0.5);
+      }
       ctx.restore();
     }
     drawInventory(ctx) { // keys + candy under the room name, top-left
@@ -8166,7 +8218,7 @@ window.G.CFG = {
         this.bubbles = [];
       }
       if (tt > 3.2 && tt < 3.3 && !this._homeSaid) { this._homeSaid = true; }
-      if (tt > 6.2) {
+      if (tt > HOME_END) {
         this._homeSaid = false;
         if (this.npcs) this.npcs.paused = false; if (this.school) this.school.paused = false;
         p.state = 'idle'; p.control = true; p.vx = 0; G.input.reset();
@@ -8176,17 +8228,18 @@ window.G.CFG = {
     }
     drawHomeOverlay(ctx) { // fade to black → Ivy in her bedroom with the scroll → vortex → back
       const tt = this.tt, W = CFG.VIEW_W, H = CFG.VIEW_H;
-      const a = tt < 1.6 ? 0 : tt < 2.2 ? (tt - 1.6) / 0.6 : tt < 5.6 ? 1 : Math.max(0, 1 - (tt - 5.6) / 0.6);
+      const OUT = HOME_END - 0.6; // fade back to the school
+      const a = tt < 1.6 ? 0 : tt < 2.2 ? (tt - 1.6) / 0.6 : tt < OUT ? 1 : Math.max(0, 1 - (tt - OUT) / 0.6);
       if (a <= 0) return;
       ctx.save(); ctx.globalAlpha = a;
-      if (tt >= 2.2 && tt < 5.6) {
+      if (tt >= 2.2 && tt < OUT) {
         G.art.drawBackground(ctx, { x: 0, y: 0 }, 'bedroom', G.time);
         ctx.fillStyle = CFG.PAL.woodDark; ctx.fillRect(0, 430, W, H - 430);
-        G.art.drawDeco(ctx, 300, 430, { kind: 'bed_ivy', t: G.time });
-        const k = U.clamp((tt - 2.4) / 1.4, 0, 1);
-        G.art.drawIvy(ctx, 470, 430, { state: k < 1 ? 'getup' : 'idle', k, facing: 1, t: G.time, speed: 0 });
-        if (tt > 3.6) G.art.drawBubble(ctx, 470, 372, t('ivy_home_wake'), { who: 'ivy' });
-        if (tt > 4.6 && G.art.drawVortex) G.art.drawVortex(ctx, 470, 400, { k: U.clamp((tt - 4.6) / 1, 0, 1), t: G.time });
+        G.art.drawDeco(ctx, 380, 430, { kind: 'bed_ivy', t: G.time });
+        const k = U.clamp((tt - 2.4) / 1.6, 0, 1);               // wakes on the floor right beside her bed
+        G.art.drawIvy(ctx, 480, 430, { state: k < 1 ? 'getup' : 'idle', k, facing: -1, t: G.time, speed: 0 });
+        if (tt > 3.8 && tt < OUT - 1.2) G.art.drawBubble(ctx, 480, 372, t('ivy_home_wake'), { who: 'ivy' }); // ~4 s to read
+        if (tt > OUT - 1.3 && G.art.drawVortex) G.art.drawVortex(ctx, 480, 400, { k: U.clamp((tt - (OUT - 1.3)) / 1, 0, 1), t: G.time });
       } else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
       ctx.restore();
     }
@@ -8318,6 +8371,7 @@ window.G.CFG = {
         this.stealth.update(dt);
         this.traps.update(dt);
         if (this.ghosts) this.ghosts.update(dt);
+        if (this.school && G.input.pressed('map')) this.bigMap = !this.bigMap;
         if (this.school) {
           this.school.update(dt);
           if (this.school.nestReached && this.mode === 'play') { this.mode = 'finale'; this.tt = 0; p.control = false; sfx('crow'); }
@@ -8410,7 +8464,7 @@ window.G.CFG = {
       this.traps.draw(ctx);
       this.stealth.draw(ctx);
       if (this.dungeon) this.dungeon.draw(ctx);
-      if (this.school) this.school.draw(ctx);
+      if (this.school) { this.school.draw(ctx); this.drawDoorPlaques(ctx, cam); }
       if (this.npcs) this.npcs.draw(ctx);
       if (this.ghosts) this.ghosts.draw(ctx);
       if (!(this.mode === 'caught' && this.drawCaught(ctx)) && this.player.state !== 'hidden') this.player.draw(ctx);
@@ -8431,9 +8485,10 @@ window.G.CFG = {
         if (wf > 0) { ctx.fillStyle = 'rgba(245,238,225,' + wf.toFixed(2) + ')'; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H); }
       }
       G.ui.drawHUD(ctx, { alert: this.stealth.maxAlert(), hint: this.hint(), levelName: room && room.nameKey ? t(room.nameKey) : t(this.level.nameKey) });
-      if (this.school) { this.drawMinimap(ctx); this.drawInventory(ctx); }
+      if (this.school) { if (!this.bigMap) this.drawMinimap(ctx, false); this.drawInventory(ctx); }
       if (this.school && this.school.transitK) { const k = this.school.transitK(); if (k > 0) { ctx.fillStyle = 'rgba(0,0,0,' + k.toFixed(2) + ')'; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H); } }
       if (this.mode === 'home') this.drawHomeOverlay(ctx);
+      if (this.school && this.bigMap && this.mode === 'play') this.drawMinimap(ctx, true);
       if (this.toast) screenText(ctx, [this.toast.text], 90, 18, U.clamp(this.toast.tt * 2, 0, 1));
       const cardEnd = this.playStart == null ? 99 : this.playStart + 0.4; // the title card fades once play starts
       if ((this.mode === 'intro' || this.mode === 'play') && this.levelT < cardEnd) {

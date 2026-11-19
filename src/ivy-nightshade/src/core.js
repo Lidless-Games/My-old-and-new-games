@@ -35,7 +35,7 @@
     ArrowUp: ['up', 'jump'], KeyW: ['up', 'jump'], ArrowDown: ['down'], KeyS: ['down'],
     Space: ['jump', 'confirm'], ShiftLeft: ['sneak'], ShiftRight: ['sneak'],
     KeyE: ['action'], Enter: ['action', 'confirm'], NumpadEnter: ['action', 'confirm'],
-    Escape: ['pause', 'back'], KeyP: ['pause'], Backspace: ['back'],
+    Escape: ['pause', 'back'], KeyP: ['pause'], Backspace: ['back'], KeyM: ['map'], Tab: ['map'],
   };
   const held = {}, prevHeld = {}, keyCount = {};
   let anyPress = false, anyPressFrame = false;
@@ -59,7 +59,7 @@
   window.addEventListener('pagehide', resetKeys);
   ['pointerdown', 'touchstart'].forEach((ev) => window.addEventListener(ev, () => { anyPress = true; if (G.rhythm && G.rhythm.unlock) G.rhythm.unlock(); }, { passive: true }));
 
-  const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'sneak', 'action', 'pause', 'confirm', 'back'];
+  const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'sneak', 'action', 'pause', 'confirm', 'back', 'map'];
   G.input = {
     virtual,
     down: (a) => !!held[a],
