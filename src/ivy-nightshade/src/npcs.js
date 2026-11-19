@@ -10,7 +10,7 @@
   const TA_FETCH_T = 2.5, TA_VISIT_T = 9;
   const TA_VIEW = 5, TA_ANG = 28 * Math.PI / 180, TA_RUN = 150, TA_PATROL = 50, TA_COOLDOWN = 6;
   const CAT_HOME = 3 * T, CAT_STARTLE_R = 2.5 * T, CAT_VASE_R = 4 * T, CAT_COOLDOWN = 6, CAT_SPEED = 24;
-  const BRIBE_R = 1.3 * T;
+  const BRIBE_R = 1.3 * T, TA_ASK = 3, ASK_R = 6 * T, BEAT_LOOPS = 2;
 
   function sfx(name, opts) { if (G.sfx && G.sfx.play) G.sfx.play(name, opts); }
   function art(name, ctx, x, y, o) { const A = G.art; if (A && A[name]) { A[name](ctx, x, y, o); return true; } return false; }
@@ -36,6 +36,7 @@
       this._caught = false;
       G.inv = G.inv || { keys: {}, candy: 0 };
 
+      this._entsDone = false;
       (level.entities || []).forEach((e) => {
         const p = world.entPos(e);
         const a = e.from == null ? e.tx : e.from, b = e.to == null ? e.tx : e.to;
@@ -46,6 +47,24 @@
             facing: b >= e.tx ? 1 : -1, dir: b >= e.tx ? 1 : -1, state: 'patrol', timer: 0, notice: 0, alert: 0,
             target: p.x, seg: segment(world, p.x, p.y), walkT: 0, flip: 0,
           });
+      if (this.school && this.janitors.length > 1) { // the school has one caretaker (Grandpa): extra janitor spots become his rounds
+        const J = this.janitors[0];
+        J.beats = this.janitors.map((q) => ({ y: q.y, from: q.from, to: q.to, seg: q.seg }));
+        // plus the ground floor of a few more rooms he looks into on his rounds
+        for (const id of ['dining', 'library', 'biology']) {
+          const r = (this.school.rooms || []).find((q) => q.id === id); if (!r) continue;
+          let best = null;
+          for (const d of this.school.portals) {
+            const tx = d.x / T, ty = d.y / T - 0.5;
+            if (tx < r.tx || tx >= r.tx + r.w || ty < r.ty || ty >= r.ty + r.h) continue;
+            const sg = segment(world, d.x, d.y);
+            if (!best || sg.r - sg.l > best.seg.r - best.seg.l) best = { y: d.y, seg: sg };
+          }
+          if (best && best.seg.r - best.seg.l > 4 * T) J.beats.push({ y: best.y, seg: best.seg, from: best.seg.l + T, to: best.seg.r - T });
+        }
+        J.beatI = 0; J.loops = 0;
+        this.janitors = [J];
+      }
           { const j = this.janitors[this.janitors.length - 1]; j.home = { y: j.y, from: j.from, to: j.to, seg: j.seg }; }
         } else if (e.type === 'twins') {
           const seg = segment(world, p.x, p.y);
@@ -161,6 +180,14 @@
       if (!d || this.paused) return;
       for (const j of this.janitors) {
         if (j.state === 'notice' || j.state === 'caught' || j.state === 'travel') continue;
+        const here = Math.abs(d.y - j.y) < 1.5 * T && d.x >= j.seg.l - T && d.x <= j.seg.r + T;
+        if (!here) { // a noise in a room next door: he walks over through the door to have a look
+          if (j.visit || d.radius < 8 * T) continue;
+          const r = this._route(j.x, j.y, (seg, y) => Math.abs(y - d.y) < 1.5 * T && d.x >= seg.l - T && d.x <= seg.r + T);
+          if (!r || !r.length || r.length > 1) continue;
+          j.route = r; j.visit = { phase: 'go', t: 0, seenX: d.x }; j.state = 'travel';
+          continue;
+        }
         if (Math.hypot(d.x - j.x, d.y - j.y) > d.radius) continue;
         j.state = 'investigate'; j.target = d.x; j.timer = 0; j.flip = 0;
         j.facing = d.x >= j.x ? 1 : -1;
@@ -171,6 +198,7 @@
     reset() {
       this._caught = false; this.balloons = [];
       for (const j of this.janitors) {
+        if (j.beats) { const B = j.beats[0]; j.beatI = 0; j.loops = 0; j.home = { y: B.y, from: B.from, to: B.to, seg: B.seg }; }
         if (j.home) { j.y = j.home.y; j.from = j.home.from; j.to = j.home.to; j.seg = j.home.seg; }
         j.visit = null; j.route = null;
         j.x = j.startX; j.facing = j.startFacing; j.dir = j.startFacing; j.state = 'patrol'; j.timer = 0; j.notice = 0; j.alert = 0;
@@ -244,8 +272,22 @@
         } else { j.x += j.dir * step; j.facing = j.dir; j.walkT += dt; }
       } else if (j.state === 'pause') {
         j.timer += dt;
-        if (j.timer >= J_PAUSE) { j.dir = -j.dir; j.facing = j.dir; j.state = 'patrol'; }
+        if (j.timer >= J_PAUSE) {
+          j.dir = -j.dir; j.facing = j.dir; j.state = 'patrol';
+          j.loops = (j.loops || 0) + 1;
+          if (j.beats && j.beats.length > 1 && j.loops >= BEAT_LOOPS && !j.visit) this._nextBeat(j);
+        }
       }
+    }
+
+    // the one caretaker makes his rounds: after a few lengths of a room he walks through the doors to the next one
+    _nextBeat(j) {
+      let n = j.beatI; while (n === j.beatI) n = Math.floor(Math.random() * j.beats.length);
+      j.beatI = n;
+      const B = j.beats[j.beatI];
+      const r = this._route(j.x, j.y, (seg, y) => Math.abs(y - B.y) < 1.5 * T && Math.abs(seg.l - B.seg.l) < T);
+      if (!r) return;
+      j.route = r; j.visit = { phase: 'beat' }; j.state = 'travel'; j.loops = 0;
     }
 
     _twins(tw, dt, p) {
@@ -330,6 +372,14 @@
         }
         return true;
       }
+      if (v.phase === 'beat') {
+        if (this._travel(j, dt, j.speed * 1.2)) {
+          const B = j.beats[j.beatI];
+          j.home = { y: B.y, from: B.from, to: B.to, seg: B.seg };
+          j.y = B.y; j.from = B.from; j.to = B.to; j.seg = B.seg; j.visit = null; j.state = 'return';
+        }
+        return true;
+      }
       if (v.phase === 'search') {
         v.t += dt;
         if (v.t < TA_VISIT_T || j.state === 'investigate' || j.state === 'search' || j.state === 'notice' || j.state === 'turn') return false;
@@ -358,8 +408,17 @@
         const target = ta.dir > 0 ? ta.to : ta.from, step = TA_PATROL * dt;
         if (ta.from === ta.to || Math.abs(target - ta.x) <= step) { ta.x = target; ta.dir = -ta.dir; ta.facing = ta.dir; }
         else { ta.x += ta.dir * step; ta.facing = ta.dir; ta.walkT += dt; }
-        if (ta.cool <= 0 && this._inCone(ta, eyeY, TA_VIEW, TA_ANG)) { // standing still does not fool him
-          ta.state = 'run'; ta.timer = 0; ta.facing = p.x >= ta.x ? 1 : -1;
+        if (ta.cool <= 0 && this._inCone(ta, eyeY, TA_VIEW, TA_ANG)) { // standing still does not fool her
+          ta.state = 'ask'; ta.timer = 0; ta.facing = p.x >= ta.x ? 1 : -1;
+          G.events.emit('tattle_ask', { x: ta.x, y: ta.y });
+          sfx('stir', { vol: 0.5 });
+        }
+      } else if (ta.state === 'ask') { // she stops: "A ghost?" – a moment to hand her a sweet
+        ta.timer += dt;
+        if (p.state === 'hidden') { ta.state = 'walk'; ta.cool = 2; G.events.emit('tattle_doubt', { x: ta.x, y: ta.y }); return; }
+        ta.facing = p.x >= ta.x ? 1 : -1;
+        if (ta.timer >= TA_ASK) {
+          ta.state = 'run'; ta.timer = 0;
           G.events.emit('tattle_run', { x: ta.x, y: ta.y });
           sfx('stir', { vol: 0.7 });
         }
@@ -431,8 +490,10 @@
     }
 
     _bribe(p) {
-      if (!p || p.state === 'hidden' || !G.input.pressed('action')) return;
-      const ta = this._bribeTarget();
+      if (!p || p.state === 'hidden') return;
+      const asking = this._askTarget();
+      if (!(G.input.pressed('action') || (asking && G.input.pressed('down')))) return;
+      const ta = asking || this._bribeTarget();
       if (!ta) return;
       G.inv.candy--; ta.bribed = true; ta.state = 'eat';
       sfx('checkpoint', { vol: 0.6 });
@@ -451,6 +512,18 @@
       return best;
     }
 
+    _askTarget() {
+      const p = this.player;
+      if (!p || p.state === 'hidden' || !G.inv || !(G.inv.candy > 0)) return null;
+      return this.tattles.find((ta) => ta.state === 'ask' && !ta.bribed && Math.abs(ta.x - p.x) <= ASK_R && Math.abs(ta.y - p.y) < 2 * T) || null;
+    }
+    // shown above everything else while a tattle is asking
+    askPrompt() {
+      const p = this.player;
+      const ta = this.tattles.find((q) => q.state === 'ask' && Math.abs(q.x - p.x) <= ASK_R && Math.abs(q.y - p.y) < 2 * T);
+      if (!ta) return null;
+      return G.inv && G.inv.candy > 0 ? 'hint_candy_ask' : 'hint_candy_none';
+    }
     nearestAction() { return this._bribeTarget() ? 'hint_candy_give' : null; }
 
     // ------------------------------------------------------------ draw

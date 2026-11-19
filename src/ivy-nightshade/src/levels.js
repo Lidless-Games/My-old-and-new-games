@@ -264,7 +264,7 @@
     au.creak(36, 38).creak(48, 50);
     au.door('p_au_lib', 'p_lib_au', 30, 'door')
       .door('p_au_din', 'p_din_au', 33, 'door')
-      .door('p_au_cel', 'p_cel_au', 43, 'trapdoor', 'blue')
+      .door('p_au_cel', 'p_cel_au', 44, 'stairs_down', 'blue')
       .door('p_au_tow', 'p_tow_au', 52, 'stairs_up', 'red')
       .door('p_au_bio', 'p_bio_au', 55, 'door')
       .door('p_au_mus', 'p_mus_au', 31, 'door', null, 6)
