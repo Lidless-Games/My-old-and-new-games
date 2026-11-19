@@ -52,17 +52,17 @@
       if (this.tt > 1.5 && (G.input.pressed('confirm') || G.input.pressed('action') || G.input.pressed('back'))) G.scenes.set(G.ui.MenuScene);
     }
     draw(ctx) {
-      if (G.art) G.art.drawBackground(ctx, { x: 0, y: 0 }, 'hall', G.time);
-      const floorY = 440;
-      ctx.fillStyle = CFG.PAL.stoneDark; ctx.fillRect(0, floorY, CFG.VIEW_W, 100);
+      // after the scroll: Ivy floats in the teleport vortex, on her way to the boarding school
+      ctx.fillStyle = CFG.PAL.plumDeep; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H);
+      const cx = CFG.VIEW_W / 2, cy = 330;
       if (G.art) {
-        G.art.drawDeco(ctx, 620, floorY, { kind: 'stairs_down', t: G.time });
-        G.art.drawIvy(ctx, 520, floorY, { state: 'idle', facing: 1, t: G.time, speed: 0 });
-        G.art.drawLight(ctx, 526, floorY - 40, G.time, 0.6);
+        if (G.art.drawVortex) G.art.drawVortex(ctx, cx, cy, { k: 1, t: G.time });
+        G.art.drawIvy(ctx, cx, cy + 25 + Math.sin(G.time * 2) * 6, { state: 'fall', facing: 1, t: G.time, speed: 0 });
+        G.art.drawCrow(ctx, cx + 300, 250 + Math.sin(G.time * 1.6) * 10, { t: G.time, heads: 2, scale: 1.1, flap: 1 });
       }
       const a = U.clamp(this.tt / 1.5, 0, 1);
-      screenText(ctx, [t('m1_end_1')], 120, 22, a);
-      screenText(ctx, [t('m1_end_2')], 175, 30, U.clamp((this.tt - 1.5) / 1.2, 0, 1));
+      screenText(ctx, [t('m2_end_1')], 120, 22, a);
+      screenText(ctx, [t('m2_end_2')], 175, 30, U.clamp((this.tt - 1.5) / 1.2, 0, 1));
       if (this.tt > 2.5) screenText(ctx, [t('m1_end_3')], 515, 14, 0.5 + 0.3 * Math.sin(G.time * 3));
     }
   }
@@ -79,6 +79,10 @@
       this.stealth = new G.Stealth(this.world, this.player, L);
       this.traps = new G.Traps(this.world, this.player, L);
       this.ghosts = G.Ghosts ? new G.Ghosts(this.world, this.player, L) : null;
+      const hasDungeon = (L.entities || []).some((e) => ['skeletons', 'rockfall', 'web', 'dark', 'torch', 'candles', 'door', 'scroll'].includes(e.type));
+      this.dungeon = G.Dungeon && hasDungeon ? new G.Dungeon(this.world, this.player, L, this.ghosts) : null;
+      if (this.dungeon) this.player.speedMul = () => (this.dungeon.speedMul ? this.dungeon.speedMul() : 1);
+      this.hasScroll = (L.entities || []).some((e) => e.type === 'scroll');
       this.deco = (L.entities || []).filter((e) => e.type === 'deco').map((e) => {
         const p = this.world.entPos(e);
         if (e.kind === 'cobweb') { p.x = e.tx * T; p.y = e.ty * T; }
@@ -90,6 +94,8 @@
       this.elapsed = 0;
       this.player.control = false;
       G.events.on('caught', (d) => this.beginCaught(d));
+      G.events.on('door_open', () => { this.toast = { text: t('door_open'), tt: 2.5 }; sfx('door'); });
+      G.events.on('ghost_summoned', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_wrong_candles'), 'ivy', 3); this.bubbles[0].follow = true; });
       G.events.on('checkpoint', (d) => { this.toast = { text: t('checkpoint'), tt: 2 }; this.trail = [{ x: d.x, y: d.y, st: 'idle' }]; });
       this.trail = [{ x: sp.x, y: sp.y, st: 'idle' }];
       G.camera.x = U.clamp(sp.x - CFG.VIEW_W / 2, 0, Math.max(0, this.world.wpx - CFG.VIEW_W));
@@ -105,7 +111,7 @@
       if (this.mode !== 'play') return;
       this.caughtCount = (this.caughtCount || 0) + 1;
       this.mode = 'caught'; this.tt = 0;
-      this.stealth.paused = true; this.traps.paused = d.by !== 'trap'; if (this.ghosts) this.ghosts.paused = true;
+      this.stealth.paused = true; this.traps.paused = d.by !== 'trap'; if (this.ghosts) this.ghosts.paused = true; if (this.dungeon) this.dungeon.paused = true;
       const p = this.player;
       p.control = false;
       sfx('caught');
@@ -196,7 +202,7 @@
       }
       if (!c.arrived) {
         c.arrived = true; ivy.drag = false; ivy.x = c.cp.x; ivy.y = c.cp.y; p.setPos(c.cp.x, c.cp.y);
-        this.stealth.resetAlerts(); if (this.traps.reset) this.traps.reset(); if (this.ghosts && this.ghosts.reset) this.ghosts.reset();
+        this.stealth.resetAlerts(); if (this.traps.reset) this.traps.reset(); if (this.ghosts && this.ghosts.reset) this.ghosts.reset(); if (this.dungeon && this.dungeon.reset) this.dungeon.reset();
         sfx('checkpoint', { vol: 0.5 });
       }
       if (c.kind === 'death' && tt < c.t5) { // spider climbs up and away, Ivy gets up slowly
@@ -210,7 +216,7 @@
       c.spider = null;
       p.facing = ivy.facing || p.facing;
       p.state = 'idle'; p.control = true;
-      this.stealth.paused = false; this.traps.paused = false; if (this.ghosts) this.ghosts.paused = false;
+      this.stealth.paused = false; this.traps.paused = false; if (this.ghosts) this.ghosts.paused = false; if (this.dungeon) this.dungeon.paused = false;
       this.mode = 'play';
       this.say(p.x, p.y - 56, c.line, 'ivy', 2.6);
       this.cs = null;
@@ -397,13 +403,25 @@
         this.stealth.update(dt);
         this.traps.update(dt);
         if (this.ghosts) this.ghosts.update(dt);
+        if (this.dungeon) {
+          this.dungeon.update(dt);
+          if (this.dungeon.scrollReached && this.mode === 'play') { this.mode = 'scroll'; this.tt = 0; p.control = false; sfx('win'); }
+        }
         if (p.y > this.world.hpx + 200) this.beginCaught({ by: 'trap', kind: 'chandelier', x: p.x, y: p.y });
-        if (p.state !== 'hidden' && U.overlap(p.rect(), this.door.rect)) {
+        if (!this.hasScroll && this.mode === 'play' && p.state !== 'hidden' && U.overlap(p.rect(), this.door.rect)) {
           this.mode = 'done'; this.tt = 0; p.control = false; sfx('win');
           G.save.set('progress', Math.max(G.save.get('progress', 0), Math.min(this.index + 1, G.LEVELS.length - 1)));
         }
       } else if (this.mode === 'caught') {
         this.updateCaught(dt);
+      } else if (this.mode === 'scroll') { // Ivy unrolls the scroll, a vortex swallows her
+        p.update(dt);
+        if (this.tt > 0.2 && !this._scrollSaid) { this._scrollSaid = true; this.say(p.x, p.y - 56, t('scroll_read'), 'ivy', 2.6); this.bubbles[0].follow = true; }
+        if (this.tt > 2.6 && !this._whoosh) { this._whoosh = true; sfx('whoosh'); }
+        if (this.tt > 5.2) {
+          G.save.set('progress', Math.max(G.save.get('progress', 0), this.index));
+          G.scenes.set(new EndScene());
+        }
       } else if (this.mode === 'done') {
         p.update(dt);
         if (this.tt > 2.0) G.game.nextLevel(this.index);
@@ -428,6 +446,12 @@
       if (this.mode !== 'play') return '';
       if (p.state === 'hidden') return t('hint_unhide');
       if (this.stealth.nearestHide()) return t('hint_hide');
+      if (this.dungeon && this.dungeon.nearestAction) { const k = this.dungeon.nearestAction(); if (k) return t(k); }
+      if (this.dungeon) {
+        const D = this.dungeon;
+        if (D.webs.some((w) => !w.torn && p.x > w.x - 3 * T && p.x < w.x + (w.len + 1) * T && Math.abs(p.y - w.y) < T)) return t('hint_web');
+        if (D.skeletons.some((s) => Math.abs((s.c != null ? s.c : s.a.x) - p.x) < 5 * T && Math.abs(s.y - p.y) < T)) return t('hint_skeleton');
+      }
       if (U.dist(p.x, p.y, this.door.x, this.door.y) < T * 3) return t('hint_exit');
       const w = this.world, fy = w.toTile(p.y + 1);
       for (let k = 0; k <= 3; k++) if (w.isCreaky(w.toTile(p.x + p.facing * k * T), fy)) return t('hint_creak');
@@ -453,16 +477,24 @@
       G.art.drawDeco(ctx, this.door.x, this.door.y, { kind: 'stairs_down', t: G.time });
       this.traps.draw(ctx);
       this.stealth.draw(ctx);
+      if (this.dungeon) this.dungeon.draw(ctx);
       if (this.ghosts) this.ghosts.draw(ctx);
       if (!(this.mode === 'caught' && this.drawCaught(ctx)) && this.player.state !== 'hidden') this.player.draw(ctx);
       ctx.restore();
       const p = this.player;
-      const strength = { bedroom: 0.72, greenhouse: 0.6, lab: 0.68, hall: 0.7 }[theme] ?? 0.7;
+      let strength = { bedroom: 0.72, greenhouse: 0.6, lab: 0.68, hall: 0.7, crypt: 0.76 }[theme] ?? 0.7;
+      if (this.dungeon && this.dungeon.lightStrength) strength = this.dungeon.lightStrength(strength);
       G.art.drawLight(ctx, p.x - cam.x, p.y - 40 - cam.y, G.time, p.state === 'hidden' ? strength + 0.1 : strength);
       // bubbles above the light
       ctx.save(); ctx.translate(-cam.x, -cam.y);
       this.bubbles.forEach((b) => G.art.drawBubble(ctx, b.x, b.y, b.text, { who: b.who }));
       ctx.restore();
+      if (this.mode === 'scroll' && G.art.drawVortex) {
+        const k = U.clamp((this.tt - 1.2) / 3, 0, 1);
+        ctx.save(); ctx.translate(-cam.x, -cam.y); G.art.drawVortex(ctx, p.x, p.y - 30, { k, t: G.time }); ctx.restore();
+        const wf = U.clamp((this.tt - 3.8) / 1.2, 0, 1);
+        if (wf > 0) { ctx.fillStyle = 'rgba(245,238,225,' + wf.toFixed(2) + ')'; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H); }
+      }
       G.ui.drawHUD(ctx, { alert: this.stealth.maxAlert(), hint: this.hint(), levelName: t(this.level.nameKey) });
       if (this.toast) screenText(ctx, [this.toast.text], 90, 18, U.clamp(this.toast.tt * 2, 0, 1));
       const cardEnd = this.playStart == null ? 99 : this.playStart + 0.4; // the title card fades once play starts

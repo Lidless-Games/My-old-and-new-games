@@ -219,7 +219,7 @@
           this._updateClimb(dt, { left, right, up, down, jumpPressed: false, dir });
         } else {
           // horizontal
-          const maxV = (sneakEff && wasGround) ? CFG.SNEAK_SPEED : CFG.WALK_SPEED; // full air control: sneak-jumps clear creaky boards
+          const maxV = ((sneakEff && wasGround) ? CFG.SNEAK_SPEED : CFG.WALK_SPEED) * (this.speedMul ? this.speedMul() : 1); // full air control: sneak-jumps clear creaky boards
           const target = dir * maxV;
           const grounded = wasGround;
           const acc = dir === 0 ? GROUND_DECEL : (grounded ? GROUND_ACCEL : AIR_ACCEL);

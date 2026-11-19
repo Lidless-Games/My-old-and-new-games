@@ -3,7 +3,7 @@
 import os, sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 ORDER = ['config.js', 'core.js', 'i18n.js', 'rhythm.js', 'art.js', 'player.js', 'stealth.js',
-         'traps.js', 'ghosts.js', 'levels.js', 'ui.js', 'game.js', 'main.js']
+         'traps.js', 'ghosts.js', 'dungeon.js', 'levels.js', 'ui.js', 'game.js', 'main.js']
 parts = []
 for f in ORDER:
     p = os.path.join(ROOT, 'src', f)

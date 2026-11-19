@@ -173,3 +173,48 @@ G.ui.PauseOverlay // {draw(ctx), update(dt) → 'resume'|'menu'|null}
 ## Game (game.js, lead) → `G.game`
 `G.game.start(i)`, level flow, camera, caught sequence, intro/end cards, `G.game.nextLevel()`.
 Events used by game: `caught`, `checkpoint`, `stir`. Draw order: background → tiles → deco → traps → stealth → player → light → HUD.
+
+# M2 addendum – the dungeon (levels 5–6, theme 'crypt')
+Levels 5 and 6 continue right after floor 4 in `G.LEVELS` (indices 4, 5). New theme `'crypt'`.
+Ghosts (all levels): besides seeing, a ghost HEARS Ivy behind it: if she is within `CFG.GHOST_HEAR_RADIUS ?? 3.5` tiles
+of a ghost, not hidden, and her current noise > `CFG.NOISE_SNEAK*1.5` (i.e. not sneaking / not standing still),
+the ghost turns around towards her (and then its normal view rules apply). Sneaking behind a ghost is safe.
+
+## New level entities (dungeon.js reads them; levels.js places them)
+```js
+{type:'skeletons', tx, ty, width: 4, offset: 0}  // a pair of dancing skeletons waltzing back and forth over `width` tiles
+                                                  // on the beat (6-beat loop). Touching one = spotted: emit 'caught' {by:'skeleton', who:'skeleton', x, y}
+{type:'rockfall', tx, ty, offset: 0}              // ceiling stone above (tx, ceiling) falling on beat (6-beat loop):
+                                                  // dust trickles 1 beat before (warn), stone falls (danger), lies 1 beat, resets.
+                                                  // Hit = death: emit 'caught' {by:'trap', kind:'rock', x, y}
+{type:'web', tx, ty, len: 3}                      // sticky cobweb patch on the floor (row ty) of len tiles: Ivy moves at
+                                                  // CFG.WEB_SLOW ?? 0.45 speed; walking through rips it → emits 'noise' {x,y,radius:6 tiles}
+                                                  // (ghosts within radius turn towards it); sneaking through is quiet
+{type:'dark', tx, ty, w: 12, h: 8}                // dark zone (tile rect): while Ivy is inside, the light overlay strength is
+                                                  // CFG.DARK_STRENGTH ?? 0.93 (only her candle circle visible) unless the zone is lit
+{type:'torch', tx, ty, zone: 0}                   // wall torch (index of the dark zone it belongs to in level order of 'dark' entities);
+                                                  // Ivy presses action (E/↓) next to an unlit torch → it lights; when all torches of a
+                                                  // zone are lit the zone becomes lit (normal light strength). Lighting is silent.
+{type:'candles', tx, ty}                          // the 4-candle puzzle row (4 candles 1.5 tiles apart starting at tx, on row ty)
+{type:'door', tx, ty}                             // crypt door (2 tiles wide, 3 tall, bottom at row ty+1); solid while closed
+{type:'scroll', tx, ty}                           // magic scroll on a pedestal behind the door; touching it = level/milestone end
+{type:'ghostspawn', tx, ty}                       // allowed spawn points for puzzle ghosts (never on a hide spot / at the door)
+```
+Candle puzzle rules: on level start 3 of the 4 candles are randomly chosen as "right". Ivy lights a candle with action next to it
+(max 3 lit; lighting a 4th puts out the earliest lit one). When exactly 3 are lit:
+right set → the 4th lights by itself, door opens (emit 'door_open'); wrong set → all 4 go out with a puff, and a ghost appears
+at a random 'ghostspawn' point not within 2 tiles of Ivy (emit 'ghost_summoned'); if the level would then have 4 ghosts, the
+oldest summoned (else oldest) ghost vanishes, so at most 3 at once. `G.Ghosts` must offer `add(x, y, opts)` and `remove(ghost)`.
+
+## Module ownership (M2)
+- `src/dungeon.js` (new, build order after ghosts.js) → `G.Dungeon` class: `new G.Dungeon(world, player, level, ghosts)`;
+  `update(dt)`, `draw(ctx)` (world space, after traps), `paused`, `reset()` (after caught: skeletons/rocks restart; webs/torches/
+  candles keep state), `lightStrength(base)` → light overlay strength for the current frame, `nearestAction()` → hint key or null
+  ('hint_torch' | 'hint_candle'), `isSolid(tx,ty)` extra solidity (closed door) – the lead wires this into World.isSolid via
+  `world.extraSolid = (tx,ty) => …`, `speedMul()` → current movement multiplier (web), `scrollReached` bool.
+  Owner: mechanics agent (also owns ghosts.js changes).
+- `src/art.js` additions (owner: art agent): theme 'crypt' for drawBackground/drawTiles; deco kinds tomb, coffin, skulls, bones,
+  urn, archway, chains; `drawSkeleton(ctx,x,y,{t, phase, facing, partner})`, `drawRock(ctx,x,y,{state:'warn'|'fall'|'rest', k, t})`,
+  `drawWeb(ctx,x,y,{len, torn, t})` (x,y = left end on floor), `drawTorch(ctx,x,y,{lit,t})`, `drawPuzzleCandle(ctx,x,y,{lit,t,puff})`,
+  `drawDoor(ctx,x,y,{open:0..1,t})` (x,y bottom-centre), `drawScroll(ctx,x,y,{t, glow})`, `drawVortex(ctx,x,y,{k,t})` (teleport swirl, k 0..1).
+- `src/levels.js` levels 5–6 + i18n strings (wave 2, levels agent). `src/game.js` (lead): integration, light strength, ending scene.

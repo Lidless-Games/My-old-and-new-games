@@ -86,7 +86,7 @@
       if (tx < 0 || ty < 0 || tx >= this.cols || ty >= this.rows) return '#';
       return this.grid[ty][tx] || ' ';
     }
-    isSolid(tx, ty) { const c = this.tile(tx, ty); return c === '#' || c === '=' || c === '~'; }
+    isSolid(tx, ty) { const c = this.tile(tx, ty); return c === '#' || c === '=' || c === '~' || (this.extraSolid ? !!this.extraSolid(tx, ty) : false); }
     isOneWay(tx, ty) { return this.tile(tx, ty) === '-'; }
     isLadder(tx, ty) { return this.tile(tx, ty) === 'H'; }
     isCreaky(tx, ty) { return this.tile(tx, ty) === '~' || this.creak.has(tx + ',' + ty); }

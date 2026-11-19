@@ -154,5 +154,73 @@
     });
   }
 
-  G.LEVELS = [floor1(), floor2(), floor3(), floor4()];
+  // ---------------------------------------------------------------- dungeon authoring helpers
+  function dg(L) {
+    const F1 = L.F - 1;
+    L.skel = (tx, width, offset) => { L.ents.push({ type: 'skeletons', tx, ty: F1, width, offset: offset || 0 }); return L; };
+    L.rock = (tx, offset) => { L.ents.push({ type: 'rockfall', tx, ty: F1, offset: offset || 0 }); return L; };
+    L.cweb = (tx, len) => { L.ents.push({ type: 'web', tx, ty: F1, len }); return L; };
+    L.dark = (tx, w) => { L.ents.push({ type: 'dark', tx, ty: 0, w, h: L.H }); return L; };
+    L.torch = (tx, zone) => { L.ents.push({ type: 'torch', tx, ty: F1, zone }); return L; };
+    L.spawn = (tx) => { L.ents.push({ type: 'ghostspawn', tx, ty: F1 }); return L; };
+    L.chain = (tx) => L.deco(tx, 'chains', 1);
+    L.cobweb = (tx) => L.deco(tx, 'cobweb', 1);
+    return L;
+  }
+
+  // ================================================================ 5. The crypt (dungeon, part 1)
+  function crypt1() {
+    const F = 13, L = dg(make(105, 15, F, 2));
+    // arrival
+    L.deco(3, 'archway').chain(8).cobweb(1).deco(7, 'urn').hide(10, 'armor');
+    // 1. dancing skeletons: wait for a gap or jump over them
+    L.deco(13, 'bones').skel(16, 6, 0).chain(19).deco(24, 'skulls').hide(26, 'curtain');
+    // 2. rockfall under a low vault (watch the dust)
+    L.low(31, 37, 5).rock(34, 0).deco(30, 'tomb').chain(33).chain(36);
+    L.hide(42, 'armor').deco(45, 'urn');
+    // 3. cobweb passage, then a ghost on patrol
+    L.cweb(48, 3).cobweb(47).chain(50).deco(53, 'bones');
+    L.hide(55, 'curtain').ghost(59, 63, 4, 40).deco(65, 'coffin').chain(60);
+    L.hide(69, 'armor');
+    // 4. dark zone with two torches
+    L.dark(72, 18).torch(74, 0).torch(86, 0).deco(79, 'tomb').deco(83, 'skulls').chain(81).cobweb(73);
+    L.hide(91, 'curtain');
+    // 5. final waltz
+    L.skel(94, 5, 3).deco(93, 'urn').chain(97).deco(101, 'candelabra').deco(100, 'banner', F - 3);
+    return finish(L, {
+      id: 'crypt1', nameKey: 'lvl_crypt1', theme: 'crypt', introKey: 'intro_crypt1',
+      start: { tx: 6, ty: F - 1 }, exit: { tx: 102, ty: F - 1 },
+    });
+  }
+
+  // ================================================================ 6. The scroll chamber (dungeon, part 2)
+  function crypt2() {
+    const W = 122, F = 13, L = dg(make(W, 15, F, 2));
+    L.deco(3, 'archway').chain(8).cobweb(1).deco(7, 'urn').hide(10, 'armor');
+    // skeleton ballroom: two pairs, out of step
+    L.deco(12, 'bones').skel(14, 5, 0).chain(17).hide(22, 'curtain').deco(24, 'skulls');
+    L.skel(26, 6, 3).chain(29).deco(33, 'bones').hide(34, 'armor');
+    // two stones under a low vault
+    L.low(38, 46, 5).rock(40, 0).rock(44, 2).chain(42).deco(49, 'urn').hide(52, 'curtain');
+    // webs with a ghost between them
+    L.cweb(56, 3).cobweb(55).ghost(62, 66, 4, 40).hide(60, 'armor').deco(68, 'coffin').hide(70, 'curtain');
+    L.cweb(73, 3).chain(74).deco(76, 'skulls');
+    // dark zone: web, stone, two torches
+    L.hide(77, 'armor').dark(79, 19).torch(81, 0).torch(96, 0).deco(84, 'tomb').cobweb(80);
+    L.cweb(87, 2).low(89, 93, 5).rock(91, 4).chain(90).deco(94, 'bones');
+    L.hide(99, 'curtain');
+    // candle room
+    L.deco(101, 'bones').chain(103).chain(108).deco(115, 'banner', F - 3).hide(110, 'curtain');
+    L.ents.push({ type: 'candles', tx: 103, ty: F - 1 });
+    L.ents.push({ type: 'door', tx: 113, ty: F - 1 });
+    L.ents.push({ type: 'scroll', tx: 117, ty: F - 1 });
+    [20, 32, 48, 67, 83, 95, 102, 107].forEach((x) => L.spawn(x));
+    L.deco(100, 'candelabra').deco(119, 'candelabra');
+    return finish(L, {
+      id: 'crypt2', nameKey: 'lvl_crypt2', theme: 'crypt', introKey: 'intro_crypt2',
+      start: { tx: 6, ty: F - 1 }, exit: { tx: W + 8, ty: F - 1 }, // unreachable: the level ends at the scroll
+    });
+  }
+
+  G.LEVELS = [floor1(), floor2(), floor3(), floor4(), crypt1(), crypt2()];
 })();
