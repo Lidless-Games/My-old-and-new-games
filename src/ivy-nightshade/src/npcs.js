@@ -6,7 +6,7 @@
   // ---- tuning ----
   const J_VIEW = 6, J_ANG = 25 * Math.PI / 180, J_EYE = 40, J_NOTICE = 0.4;
   const J_INVEST_MUL = 1.7, J_SEARCH = 5, J_TURN = 1.4, J_HEAR_WALK = 3 * T, J_PAUSE = 1.0;
-  const TW_RANGE = 7 * T, TW_COOLDOWN = 3, TW_FIRST = 0.7, BALLOON_G = 900;
+  const TW_RANGE = 7 * T, TW_COOLDOWN = 2, TW_FIRST = 0.7, BALLOON_G = 900;
   const TA_FETCH_T = 2.5, TA_VISIT_T = 9;
   const TA_VIEW = 5, TA_ANG = 28 * Math.PI / 180, TA_RUN = 150, TA_PATROL = 50, TA_COOLDOWN = 6;
   const CAT_HOME = 3 * T, CAT_STARTLE_R = 2.5 * T, CAT_VASE_R = 4 * T, CAT_COOLDOWN = 6, CAT_SPEED = 24;
@@ -55,7 +55,7 @@
         } else if (e.type === 'tattle') {
           this.tattles.push({
             x: p.x, y: p.y, from, to, startX: p.x, startFacing: b >= e.tx ? 1 : -1, facing: b >= e.tx ? 1 : -1, dir: b >= e.tx ? 1 : -1,
-            state: 'walk', timer: 0, cool: 0, seg: segment(world, p.x, p.y), bribed: false, target: null, walkT: 0,
+            state: 'walk', timer: 0, cool: 0, seg: segment(world, p.x, p.y), homeY: p.y, bribed: false, target: null, walkT: 0, route: null,
           });
         } else if (e.type === 'cat') {
           this.cats.push({
@@ -119,11 +119,48 @@
       return false;
     }
 
+    // doors on the floor segment `seg` at feet-y `y`
+    _doorsIn(seg, y) {
+      return (this.school && this.school.portals || []).filter((d) => Math.abs(d.y - y) < 1.5 * T && d.x >= seg.l - T && d.x <= seg.r + T);
+    }
+    _partner(d) { return this.school.portals.find((q) => q.id === d.to); }
+    // breadth-first search over doors: the list of doors to walk through from (x,y) until goal(seg, y) holds
+    _route(x, y, goal) {
+      const w = this.world, start = { seg: segment(w, x, y), y, path: [] };
+      const key = (n) => Math.round(n.seg.l) + ':' + Math.round(n.y / T);
+      const seen = new Set([key(start)]), q = [start];
+      while (q.length) {
+        const n = q.shift();
+        if (goal(n.seg, n.y)) return n.path;
+        for (const d of this._doorsIn(n.seg, n.y)) {
+          const o = this._partner(d); if (!o) continue;
+          const m = { seg: segment(w, o.x, o.y), y: o.y, path: n.path.concat([d]) };
+          if (seen.has(key(m))) continue; seen.add(key(m)); q.push(m);
+        }
+      }
+      return null;
+    }
+    // walk along n.route through the doors; true when the last door has been passed
+    _travel(n, dt, speed) {
+      if (!n.route || !n.route.length) return true;
+      const d = n.route[0];
+      if (this._walkTo(n, d.x, speed, dt) || Math.abs(d.x - n.x) < 0.3 * T) {
+        const o = this._partner(d);
+        n.x = o.x; n.y = o.y; n.seg = segment(this.world, o.x, o.y); n.route.shift(); n.lastDoor = o;
+        sfx('door', { vol: 0.45 });
+        return !n.route.length;
+      }
+      return false;
+    }
+    _freeJanitorIn(seg, y) {
+      return this.janitors.find((j) => !j.visit && j.state !== 'caught' && Math.abs(j.y - y) < 1.5 * T && j.x >= seg.l - T && j.x <= seg.r + T);
+    }
+
     // ------------------------------------------------------------ noise
     hearNoise(d) {
       if (!d || this.paused) return;
       for (const j of this.janitors) {
-        if (j.state === 'notice' || j.state === 'caught') continue;
+        if (j.state === 'notice' || j.state === 'caught' || j.state === 'travel') continue;
         if (Math.hypot(d.x - j.x, d.y - j.y) > d.radius) continue;
         j.state = 'investigate'; j.target = d.x; j.timer = 0; j.flip = 0;
         j.facing = d.x >= j.x ? 1 : -1;
@@ -135,11 +172,12 @@
       this._caught = false; this.balloons = [];
       for (const j of this.janitors) {
         if (j.home) { j.y = j.home.y; j.from = j.home.from; j.to = j.home.to; j.seg = j.home.seg; }
-        j.visit = null;
+        j.visit = null; j.route = null;
         j.x = j.startX; j.facing = j.startFacing; j.dir = j.startFacing; j.state = 'patrol'; j.timer = 0; j.notice = 0; j.alert = 0;
       }
       for (const tw of this.twins) { tw.cd = TW_FIRST; tw.throwK = 0; tw.mode = 'play'; tw.x = tw.homeX; tw.facing = tw.homeFacing; tw.clearT = 0; }
       for (const ta of this.tattles) {
+        ta.y = ta.homeY; ta.seg = segment(this.world, ta.startX, ta.homeY); ta.route = null; ta.fetching = false;
         ta.x = ta.startX; ta.facing = ta.startFacing; ta.dir = ta.startFacing; ta.timer = 0; ta.cool = 0; ta.target = null; ta.away = false; ta.door = null;
         ta.state = ta.bribed ? 'eat' : 'walk';
       }
@@ -178,7 +216,7 @@
         return;
       }
       if (j.state === 'notice') { j.state = 'return'; j.notice = 0; }
-      if (j.visit && this._visitDone(j, dt)) return;
+      if (j.visit && this._visitStep(j, dt)) return;
 
       // heard Ivy walking close by
       if (this._walking() && Math.abs(p.x - j.x) <= J_HEAR_WALK && Math.abs(p.y - j.y) < 2 * T && (j.state === 'patrol' || j.state === 'pause' || j.state === 'return' || j.state === 'search' || j.state === 'turn')) {
@@ -231,6 +269,8 @@
         return;
       }
       if (this._hidden()) return;
+      // they turn towards Ivy when she is on their floor, on either side
+      if (Math.abs(p.y - tw.y) <= 2 * T && Math.abs(p.x - tw.x) <= TW_RANGE && p.x >= tw.seg.l - T && p.x <= tw.seg.r + T) tw.facing = p.x >= tw.x ? 1 : -1;
       const dx = (p.x - tw.x) * tw.facing;
       if (dx <= 0 || dx > TW_RANGE || Math.abs(p.y - tw.y) > 2 * T) return;
       const ex = tw.x, ey = tw.y - 44;
@@ -272,21 +312,34 @@
       }
     }
 
-    // a caretaker fetched by the tattle enters the room through the door, searches where Ivy was seen, then goes home
-    _visit(j, ta) {
-      const d = this.school.portals.reduce((a, q) => (!a || Math.abs(q.x - ta.x) + Math.abs(q.y - ta.y) < Math.abs(a.x - ta.x) + Math.abs(a.y - ta.y) ? q : a), null);
-      j.visit = { door: d, t: 0 };
-      j.x = d.x; j.y = d.y; j.seg = segment(this.world, d.x, d.y); j.from = j.seg.l + T; j.to = j.seg.r - T;
-      j.state = 'investigate'; j.target = clamp(ta.seenX, j.seg.l + T / 2, j.seg.r - T / 2); j.facing = j.target >= j.x ? 1 : -1;
-      sfx('door', { vol: 0.8 });
-      G.events.emit('janitor_enter', { x: j.x, y: j.y });
+    // the tattle has reached a caretaker: he walks through the doors to where Ivy was seen, searches, then walks home
+    _summon(j, ta) {
+      const sx = ta.seenX, sy = ta.seenY;
+      j.route = this._route(j.x, j.y, (seg, y) => Math.abs(y - sy) < 1.5 * T && sx >= seg.l - T && sx <= seg.r + T) || [];
+      j.visit = { phase: 'go', t: 0, seenX: sx };
+      j.state = 'travel'; j.alert = 0.5;
     }
-    _visitDone(j, dt) { // after searching, he walks back to the door and returns to his own patrol
-      j.visit.t += dt;
-      if (j.visit.t < TA_VISIT_T || j.state === 'investigate' || j.state === 'search' || j.state === 'notice') return false;
-      if (this._walkTo(j, j.visit.door.x, j.speed, dt)) {
-        j.y = j.home.y; j.from = j.home.from; j.to = j.home.to; j.seg = j.home.seg; j.x = j.startX; j.visit = null; j.state = 'patrol';
-        sfx('door', { vol: 0.5 });
+    _visitStep(j, dt) { // true while the visit controls him
+      const v = j.visit;
+      if (v.phase === 'go') {
+        if (this._travel(j, dt, j.speed * 2)) {
+          v.phase = 'search'; v.t = 0;
+          j.from = j.seg.l + T; j.to = j.seg.r - T;
+          j.state = 'investigate'; j.target = clamp(v.seenX, j.seg.l + T / 2, j.seg.r - T / 2); j.facing = j.target >= j.x ? 1 : -1;
+          G.events.emit('janitor_enter', { x: j.x, y: j.y });
+        }
+        return true;
+      }
+      if (v.phase === 'search') {
+        v.t += dt;
+        if (v.t < TA_VISIT_T || j.state === 'investigate' || j.state === 'search' || j.state === 'notice' || j.state === 'turn') return false;
+        const H = j.home;
+        j.route = this._route(j.x, j.y, (seg, y) => Math.abs(y - H.y) < 1.5 * T && Math.abs(seg.l - H.seg.l) < T) || [];
+        v.phase = 'home'; j.state = 'travel';
+        return true;
+      }
+      if (this._travel(j, dt, j.speed * 1.3)) { // home: back to his own patrol
+        j.y = j.home.y; j.from = j.home.from; j.to = j.home.to; j.seg = j.home.seg; j.visit = null; j.state = 'return';
       }
       return true;
     }
@@ -312,36 +365,31 @@
         }
       } else if (ta.state === 'run') {
         ta.timer += dt;
-        let jn = null, bd = 1e9;
-        for (const j of this.janitors) {
-          if (Math.abs(j.y - ta.y) > 1.5 * T || j.x < ta.seg.l - T || j.x > ta.seg.r + T) continue; // only a caretaker in this very room
-          const d = Math.abs(j.x - ta.x); if (d < bd) { bd = d; jn = j; }
-        }
-        if (jn) {
+        if (ta.seenX == null) { ta.seenX = p.x; ta.seenY = p.y; }
+        const jn = this._freeJanitorIn(ta.seg, ta.y); // a caretaker in the room she is in right now
+        if (jn && !(ta.route && ta.route.length)) {
           const arrived = this._walkTo(ta, jn.x, TA_RUN, dt) || Math.abs(jn.x - ta.x) < 0.8 * T;
           if (arrived) {
-            G.events.emit('noise', { x: p.x, y: p.y, radius: 30 * T, src: 'tattle' });
-            ta.state = 'back'; ta.cool = TA_COOLDOWN;
+            if (!ta.fetching) { // he is right here: he hears her and comes over
+              G.events.emit('noise', { x: p.x, y: p.y, radius: 30 * T, src: 'tattle' });
+              ta.state = 'back'; ta.cool = TA_COOLDOWN; ta.seenX = null;
+            } else { // she fetched him from another room: both walk back through the doors
+              G.events.emit('tattle_call', { x: ta.x, y: ta.y });
+              this._summon(jn, ta);
+              const hy = ta.homeY, hx = ta.startX;
+              ta.route = this._route(ta.x, ta.y, (seg, y) => Math.abs(y - hy) < 1.5 * T && hx >= seg.l - T && hx <= seg.r + T) || [];
+              ta.state = 'return'; ta.fetching = false; ta.seenX = null;
+            }
           }
+        } else if (ta.route && ta.route.length) {
+          this._travel(ta, dt, TA_RUN);
         } else {
-          // no caretaker in this room: run out through the nearest door and fetch one
-          if (!ta.door) {
-            ta.seenX = p.x; ta.seenY = p.y;
-            const doors = this.school && this.school.portals ? this.school.portals.filter((d) => Math.abs(d.y - ta.y) < 1.5 * T && d.x >= ta.seg.l - T && d.x <= ta.seg.r + T) : [];
-            ta.door = doors.reduce((a, d) => (!a || Math.abs(d.x - ta.x) < Math.abs(a.x - ta.x) ? d : a), null);
-            if (!ta.door) { ta.state = 'back'; ta.cool = TA_COOLDOWN; return; }
-          }
-          if (this._walkTo(ta, ta.door.x, TA_RUN, dt) || Math.abs(ta.door.x - ta.x) < 0.5 * T) {
-            ta.state = 'fetch'; ta.away = true; ta.timer = 0; sfx('door', { vol: 0.6 });
-          }
+          ta.route = this._route(ta.x, ta.y, (seg, y) => !!this._freeJanitorIn(seg, y));
+          if (ta.route && ta.route.length) ta.fetching = true;
+          else { ta.state = 'back'; ta.cool = TA_COOLDOWN; ta.route = null; ta.seenX = null; }
         }
-      } else if (ta.state === 'fetch') { // off to the caretaker; a moment later they come back through the door
-        ta.timer += dt;
-        if (ta.timer > TA_FETCH_T) {
-          const j = this.janitors.filter((x) => !x.visit && x.state !== 'caught')[0];
-          ta.away = false; ta.state = 'back'; ta.cool = TA_COOLDOWN; ta.door = null;
-          if (j) this._visit(j, ta);
-        }
+      } else if (ta.state === 'return') { // leading the caretaker back, a little ahead of him
+        if (this._travel(ta, dt, TA_RUN * 0.65)) { ta.state = 'back'; ta.cool = TA_COOLDOWN; ta.route = null; }
       } else if (ta.state === 'back') {
         ta.shouted = false;
         if (ta.x >= ta.from && ta.x <= ta.to) { ta.state = 'walk'; ta.dir = ta.facing; }
@@ -435,7 +483,7 @@
           if (!blink) for (const ox of [-13, -6, 5, 12]) { ctx.beginPath(); ctx.arc(tw.x + ox, tw.y - 9, 1.6, 0, 7); ctx.fill(); }
           continue;
         }
-        if (!art('drawTwins', ctx, tw.x, tw.y, { t, throwK: tw.throwK, facing: tw.facing })) {
+        if (!art('drawTwins', ctx, tw.x, tw.y, { t, throwK: tw.throwK, facing: tw.facing, moving: tw.mode === 'run' || tw.mode === 'back', walk: tw.walkT })) {
           ctx.fillStyle = '#6b2e3e'; ctx.fillRect(tw.x - 14, tw.y - 38, 12, 38); ctx.fillRect(tw.x + 2, tw.y - 38, 12, 38);
         }
       }

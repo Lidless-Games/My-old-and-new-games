@@ -4043,11 +4043,12 @@
     c.fillStyle = 'rgba(10,6,16,0.28)'; ell(c, 0, 0.5, 26, 3.2); c.fill();
     const kid = (kx, ky, who) => {
       const thrower = who === 1, ph = who * 1.7;
-      const bob = sin(t * 5 + ph) * 0.7 - (thrower ? 0 : abs(sin(t * 3.2 + 1)) * 0.8), wind = thrower ? ss(k / 0.55) * (1 - ss((k - 0.55) / 0.25)) : 0, fling = thrower ? ss((k - 0.5) / 0.3) : 0;
+      const mv = o.moving ? 1 : 0, wph = (o.walk || 0) * 11 + ph, fo = mv * sin(wph) * 4;
+      const bob = mv ? -abs(sin(wph)) * 2.2 : sin(t * 5 + ph) * 0.35, wind = thrower ? ss(k / 0.55) * (1 - ss((k - 0.55) / 0.25)) : 0, fling = thrower ? ss((k - 0.5) / 0.3) : 0;
       c.save(); c.translate(kx, ky + bob);
       const sh = -27, hip = -13, pj = '#9bb4e0', pjD = '#7f9ad0';
       // legs
-      for (const s of [-1, 1]) { limb(c, s * 2.6, hip, s * 3, -3, 4, pjD, null); ell(c, s * 3.6, -1.6, 4.4, 2.6); fs(c, '#d4708a', 0.8, 0.55); for (let j = -1; j <= 1; j++) { ell(c, s * 3.6 + j * 2, -3.2, 0.7, 0.7); c.fillStyle = '#f0c0d0'; c.fill(); } }
+      for (const s of [-1, 1]) { const fx = s * 3 + s * fo; limb(c, s * 2.6, hip, fx, -3 - bob, 4, pjD, null); ell(c, fx + s * 0.6, -1.6 - bob, 4.4, 2.6); fs(c, '#d4708a', 0.8, 0.55); for (let j = -1; j <= 1; j++) { ell(c, fx + s * 0.6 + j * 2, -3.2 - bob, 0.7, 0.7); c.fillStyle = '#f0c0d0'; c.fill(); } }
       // back arm
       limb(c, -3.4, sh + 2, -7, hip - 4 + sin(t * 3 + ph) * 0.8, 3.4, pjD, null); ell(c, -7, hip - 3.4, 1.9, 1.9); fs(c, P.skin, 0.6, 0.5);
       // body nightshirt
@@ -4071,7 +4072,7 @@
       c.restore();
     };
     kid(-12, 0, 0);
-    kid(12, 2, 1);
+    kid(12, 0, 1);
     c.restore();
   }
 

@@ -113,6 +113,7 @@
       G.events.on('twins_throw', (d) => { this.say(d.x, d.y - 70, t('twins_throw_' + d.n), 'npc', 1.6); });
       G.events.on('twins_hide', (d) => { this.say(d.x, d.y - 70, t('twins_hide'), 'npc', 1.8); });
       G.events.on('twins_out', (d) => { this.say(d.x, d.y - 40, t('twins_out'), 'npc', 1.8); });
+      G.events.on('tattle_call', (d) => { this.say(d.x, d.y - 60, t('tattle_call'), 'npc', 2.4); });
       G.events.on('bribed', (d) => { this.say(d.x, d.y - 50, t('tattle_bribed'), 'npc', 3); });
       G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
       G.events.on('ghost_summoned', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_wrong_candles'), 'ivy', 3); this.bubbles[0].follow = true; });
