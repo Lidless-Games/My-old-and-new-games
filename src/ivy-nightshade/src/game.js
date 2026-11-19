@@ -215,7 +215,7 @@
       // done
       c.spider = null;
       p.facing = ivy.facing || p.facing;
-      p.state = 'idle'; p.control = true;
+      p.state = 'idle'; p.control = true; p.vx = 0; p.crouched = false; G.input.reset();
       this.stealth.paused = false; this.traps.paused = false; if (this.ghosts) this.ghosts.paused = false; if (this.dungeon) this.dungeon.paused = false;
       this.mode = 'play';
       this.say(p.x, p.y - 56, c.line, 'ivy', 2.6);

@@ -53,7 +53,10 @@
     if (G.rhythm && G.rhythm.unlock) G.rhythm.unlock();
   });
   window.addEventListener('keyup', (e) => { if (physical[e.code]) { physical[e.code] = false; setKey(e.code, false); } });
-  window.addEventListener('blur', () => { for (const k in physical) physical[k] = false; for (const a in keyCount) keyCount[a] = 0; });
+  function resetKeys() { for (const k in physical) physical[k] = false; for (const a in keyCount) keyCount[a] = 0; }
+  window.addEventListener('blur', resetKeys);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) resetKeys(); });
+  window.addEventListener('pagehide', resetKeys);
   ['pointerdown', 'touchstart'].forEach((ev) => window.addEventListener(ev, () => { anyPress = true; if (G.rhythm && G.rhythm.unlock) G.rhythm.unlock(); }, { passive: true }));
 
   const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'sneak', 'action', 'pause', 'confirm', 'back'];
@@ -63,6 +66,8 @@
     pressed: (a) => !!held[a] && !prevHeld[a],
     released: (a) => !held[a] && !!prevHeld[a],
     anyPressed: () => anyPressFrame,
+    // forget every held key (a lost keyup can never leave Ivy walking on her own); a key still held must be pressed again
+    reset() { resetKeys(); for (const a of ACTIONS) { held[a] = false; prevHeld[a] = false; } },
     _tick() { // called once per fixed update, before scene update
       ACTIONS.forEach((a) => { prevHeld[a] = held[a]; held[a] = (keyCount[a] || 0) > 0 || !!virtual[a]; });
       anyPressFrame = anyPress; anyPress = false;
