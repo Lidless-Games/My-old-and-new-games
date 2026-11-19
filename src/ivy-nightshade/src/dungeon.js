@@ -75,6 +75,8 @@
 
     // ---------- queries ----------
     isSolid(tx, ty) {
+      // a shut portcullis is a wall (only while fully down)
+      for (const r of this.rocks) if (r.state === 'rest' && tx === Math.floor(r.x / T) && ty * T >= r.ceilY && ty * T < r.floorY) return true;
       const d = this.door;
       if (!d || d.open > DOOR_PASS) return false;
       return tx >= d.tx && tx <= d.tx + 1 && ty >= d.ty - 2 && ty <= d.ty;
@@ -214,14 +216,16 @@
       for (const r of this.rocks) {
         const b = mod(beat + r.offset, LOOP), fb = r.fallBeats;
         const was = r.state;
+        // portcullis: chains rattle (1 beat) -> slams down -> stays shut (1 beat) -> rises again (1 beat) -> open
         if (b < 1) { r.state = 'warn'; r.k = b; r.y = r.top; }
         else if (b < 1 + fb) { r.state = 'fall'; r.k = (b - 1) / fb; r.y = r.top + (r.floorY - r.top) * r.k * r.k; }
         else if (b < 2 + fb) { r.state = 'rest'; r.k = (b - 1 - fb); r.y = r.floorY; }
+        else if (b < 3 + fb) { r.state = 'rise'; r.k = (b - 2 - fb); r.y = r.floorY - (r.floorY - r.top) * (0.5 - 0.5 * Math.cos(r.k * Math.PI)); }
         else { r.state = 'hang'; r.k = 0; r.y = r.top; }
         if (was === 'fall' && r.state === 'rest') {
           const d = this.player ? Math.hypot(this.player.x - r.x, this.player.y - r.floorY) : 1e9;
           const vol = G.util.clamp(1 - d / (12 * T), 0, 1);
-          if (vol > 0 && !this.paused) sfx('land', { vol });
+          if (vol > 0 && !this.paused) { sfx('land', { vol }); sfx('chandelier', { vol: vol * 0.7 }); }
         }
       }
       for (const c of this.candles) if (c.puff > 0) c.puff = Math.max(0, c.puff - (this._lastDt || 1 / 60) / PUFF_TIME);
@@ -313,7 +317,9 @@
         else this._ph(ctx, 'scroll', this.scroll, glow);
       }
       for (const r of this.rocks) {
-        if (A.drawRock) { // art: 'warn' anchors at the ceiling, 'fall'/'rest' at the rock centre (r.y is the rock bottom)
+        if (A.drawPortcullis) {
+          A.drawPortcullis(ctx, r.x, r.ceilY, r.state === 'hang' || r.state === 'warn' ? r.top - 18 : r.y, { warn: r.state === 'warn', t, state: r.state });
+        } else if (A.drawRock) {
           const warn = r.state === 'hang' || r.state === 'warn';
           A.drawRock(ctx, r.x, warn ? r.ceilY : r.y - 15, { state: warn ? 'warn' : r.state, k: warn ? 0 : r.k, t: r.state === 'hang' ? 0 : t });
         }

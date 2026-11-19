@@ -444,12 +444,14 @@
     hint() {
       const p = this.player;
       if (this.mode !== 'play') return '';
+      if (G.save.get('hints', true) === false) return ''; // hints switched off in the menu
       if (p.state === 'hidden') return t('hint_unhide');
       if (this.stealth.nearestHide()) return t('hint_hide');
       if (this.dungeon && this.dungeon.nearestAction) { const k = this.dungeon.nearestAction(); if (k) return t(k); }
       if (this.dungeon) {
         const D = this.dungeon;
         if (D.webs.some((w) => !w.torn && p.x > w.x - 3 * T && p.x < w.x + (w.len + 1) * T && Math.abs(p.y - w.y) < T)) return t('hint_web');
+        if (D.rocks.some((r) => Math.abs(r.x - p.x) < 4 * T && Math.abs(r.floorY - p.y) < T)) return t('hint_gate');
         if (D.skeletons.some((s) => Math.abs((s.c != null ? s.c : s.a.x) - p.x) < 5 * T && Math.abs(s.y - p.y) < T)) return t('hint_skeleton');
       }
       if (U.dist(p.x, p.y, this.door.x, this.door.y) < T * 3) return t('hint_exit');

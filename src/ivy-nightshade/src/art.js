@@ -2888,5 +2888,61 @@
     c.restore();
   }
 
-  G.art = { drawSkeleton, drawRock, drawWeb, drawTorch, drawPuzzleCandle, drawDoor, drawScroll, drawVortex, drawGhost, drawGhostCone, drawBackground, drawTiles, drawIvy, drawSleeper, drawWalker, drawZzz, drawHideSpot, drawTrap, drawDeco, drawCrow, drawSpider, drawThread, drawLight, drawBubble, drawCard };
+
+  // ================================================================ portcullis (replaces the falling rock)
+  // x = centre of the gate column, ceilY = underside of the vault, bottomY = current lower edge (spike tips).
+  // o.warn: chains rattle + dust; the gate shakes a little.
+  function drawPortcullis(c, x, ceilY, bottomY, o) {
+    o = o || {};
+    const t = o.t || 0, W = 40, half = W / 2;
+    const shake = o.warn ? Math.sin(t * 45) * 1.2 : 0;
+    c.save();
+    c.translate(shake, 0);
+    // stone slot in the vault
+    c.fillStyle = '#2a2433'; c.fillRect(x - half - 4, ceilY - 6, W + 8, 8);
+    c.strokeStyle = 'rgba(10,6,16,0.6)'; c.lineWidth = 1; c.strokeRect(x - half - 4, ceilY - 6, W + 8, 8);
+    // chains on both sides
+    const chainLen = Math.max(0, bottomY - ceilY);
+    for (const sx of [-1, 1]) {
+      const cx = x + sx * (half + 2);
+      for (let yy = ceilY; yy < ceilY + Math.min(chainLen, 60); yy += 6) {
+        c.strokeStyle = '#8a8f9c'; c.lineWidth = 1.4;
+        c.beginPath(); c.ellipse(cx, yy + 3, 1.8, 3, 0, 0, Math.PI * 2); c.stroke();
+      }
+    }
+    const top = Math.min(ceilY, bottomY - 8);
+    const h = bottomY - top;
+    if (h > 2) {
+      c.save();
+      c.beginPath(); c.rect(x - half - 2, ceilY - 2, W + 4, bottomY - ceilY + 14); c.clip();
+      // vertical bars with spikes
+      for (let i = 0; i < 5; i++) {
+        const bx = x - half + 3 + i * ((W - 6) / 4);
+        c.fillStyle = '#5c5868'; c.fillRect(bx - 2, top, 4, h - 6);
+        c.fillStyle = 'rgba(200,205,220,0.25)'; c.fillRect(bx - 2, top, 1.2, h - 6);
+        c.fillStyle = '#6d6979';
+        c.beginPath(); c.moveTo(bx - 3, bottomY - 7); c.lineTo(bx + 3, bottomY - 7); c.lineTo(bx, bottomY + 1); c.closePath(); c.fill();
+      }
+      // horizontal bars
+      for (let yy = bottomY - 16; yy > top; yy -= 20) {
+        c.fillStyle = '#56525f'; c.fillRect(x - half, yy - 2.5, W, 5);
+        c.fillStyle = 'rgba(200,205,220,0.2)'; c.fillRect(x - half, yy - 2, W, 1);
+        for (let i = 0; i < 5; i++) { // rivets
+          const bx = x - half + 3 + i * ((W - 6) / 4);
+          c.fillStyle = '#6a6773'; c.beginPath(); c.arc(bx, yy, 1.4, 0, Math.PI * 2); c.fill();
+        }
+      }
+      c.restore();
+    }
+    if (o.warn) { // dust trickling from the slot
+      for (let i = 0; i < 6; i++) {
+        const u = (t * 1.1 + i / 6) % 1, dx = Math.sin(i * 7.3) * half;
+        c.fillStyle = 'rgba(200,195,185,' + (0.8 * (1 - u)).toFixed(2) + ')';
+        c.beginPath(); c.arc(x + dx, ceilY + 4 + u * 30, 1.1, 0, Math.PI * 2); c.fill();
+      }
+    }
+    c.restore();
+  }
+
+  G.art = { drawPortcullis, drawSkeleton, drawRock, drawWeb, drawTorch, drawPuzzleCandle, drawDoor, drawScroll, drawVortex, drawGhost, drawGhostCone, drawBackground, drawTiles, drawIvy, drawSleeper, drawWalker, drawZzz, drawHideSpot, drawTrap, drawDeco, drawCrow, drawSpider, drawThread, drawLight, drawBubble, drawCard };
 })();

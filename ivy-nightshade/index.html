@@ -192,6 +192,7 @@ window.G.CFG = {
       menu_continue: 'Folytatás',
       menu_lang: 'Nyelv',
       menu_music: 'Zene',
+      menu_hints: 'Tippek',
       menu_controls: 'Irányítás',
       menu_back: 'Vissza',
       on: 'be',
@@ -253,10 +254,11 @@ window.G.CFG = {
       hint_skeleton: 'Táncoló csontvázak! Várd ki a lépést, vagy ugord át őket.',
       lvl_crypt1: '5. szint – A kazamata',
       lvl_crypt2: '6. szint – A tekercs kamrája',
-      intro_crypt1: 'A kazamatában a csontvázak keringőznek, a falak pedig néha hullatnak egy-egy követ. Otthonos.',
+      intro_crypt1: 'A kazamatában a csontvázak keringőznek, a rácsos kapuk pedig maguktól le-fel járnak. Otthonos.',
       intro_crypt2: 'Itt van a tekercs kamrája. Az ajtót négy gyertya őrzi, és egyik sem akar elárulni semmit. Hasonlítanak a varjúmra.',
       caught_skeleton: 'Megzavartad a keringőt! Tudod, mennyit gyakoroltunk?! Négyszáz év!',
-      caught_trap_rock: 'Egy kő. A fejemen. Nagyon geológiai élmény.',
+      caught_trap_rock: 'Egy rácsos kapu. Rám zárult. Pontosan rám.',
+      hint_gate: 'Rácsos kapu! Ha zörög a lánc, mindjárt leereszkedik – várd ki, míg újra felhúzódik.',
       ivy_wrong_candles: 'Rossz gyertyák. A füst felébresztett egy szellemet.',
       door_open: 'Az ajtó kinyílt!',
       scroll_read: 'A varázstekercs. Vigyél oda, ahol a varjúm van.',
@@ -276,6 +278,7 @@ window.G.CFG = {
       menu_continue: 'Continue',
       menu_lang: 'Language',
       menu_music: 'Music',
+      menu_hints: 'Hints',
       menu_controls: 'Controls',
       menu_back: 'Back',
       on: 'on',
@@ -337,10 +340,11 @@ window.G.CFG = {
       hint_skeleton: 'Dancing skeletons! Wait for a gap in the waltz, or jump over them.',
       lvl_crypt1: 'Level 5 – The Crypt',
       lvl_crypt2: 'Level 6 – The Scroll Chamber',
-      intro_crypt1: 'In the crypt the skeletons waltz and the ceiling sometimes drops a stone. Homely.',
+      intro_crypt1: 'In the crypt the skeletons waltz and the portcullises go up and down on their own. Homely.',
       intro_crypt2: 'The scroll chamber. Four candles guard the door, and none of them will tell me anything. They remind me of my crow.',
       caught_skeleton: 'You interrupted our waltz! Do you know how long we practised? Four hundred years!',
-      caught_trap_rock: 'A stone. On my head. A very geological experience.',
+      caught_trap_rock: 'A portcullis. It closed on me. Precisely on me.',
+      hint_gate: 'Portcullis! When the chains rattle it is about to drop – wait until it rises again.',
       ivy_wrong_candles: 'Wrong candles. And the smoke has woken a ghost.',
       door_open: 'The door has opened!',
       scroll_read: 'The magic scroll. Take me to where my crow is.',
@@ -3709,7 +3713,63 @@ window.G.CFG = {
     c.restore();
   }
 
-  G.art = { drawSkeleton, drawRock, drawWeb, drawTorch, drawPuzzleCandle, drawDoor, drawScroll, drawVortex, drawGhost, drawGhostCone, drawBackground, drawTiles, drawIvy, drawSleeper, drawWalker, drawZzz, drawHideSpot, drawTrap, drawDeco, drawCrow, drawSpider, drawThread, drawLight, drawBubble, drawCard };
+
+  // ================================================================ portcullis (replaces the falling rock)
+  // x = centre of the gate column, ceilY = underside of the vault, bottomY = current lower edge (spike tips).
+  // o.warn: chains rattle + dust; the gate shakes a little.
+  function drawPortcullis(c, x, ceilY, bottomY, o) {
+    o = o || {};
+    const t = o.t || 0, W = 40, half = W / 2;
+    const shake = o.warn ? Math.sin(t * 45) * 1.2 : 0;
+    c.save();
+    c.translate(shake, 0);
+    // stone slot in the vault
+    c.fillStyle = '#2a2433'; c.fillRect(x - half - 4, ceilY - 6, W + 8, 8);
+    c.strokeStyle = 'rgba(10,6,16,0.6)'; c.lineWidth = 1; c.strokeRect(x - half - 4, ceilY - 6, W + 8, 8);
+    // chains on both sides
+    const chainLen = Math.max(0, bottomY - ceilY);
+    for (const sx of [-1, 1]) {
+      const cx = x + sx * (half + 2);
+      for (let yy = ceilY; yy < ceilY + Math.min(chainLen, 60); yy += 6) {
+        c.strokeStyle = '#8a8f9c'; c.lineWidth = 1.4;
+        c.beginPath(); c.ellipse(cx, yy + 3, 1.8, 3, 0, 0, Math.PI * 2); c.stroke();
+      }
+    }
+    const top = Math.min(ceilY, bottomY - 8);
+    const h = bottomY - top;
+    if (h > 2) {
+      c.save();
+      c.beginPath(); c.rect(x - half - 2, ceilY - 2, W + 4, bottomY - ceilY + 14); c.clip();
+      // vertical bars with spikes
+      for (let i = 0; i < 5; i++) {
+        const bx = x - half + 3 + i * ((W - 6) / 4);
+        c.fillStyle = '#5c5868'; c.fillRect(bx - 2, top, 4, h - 6);
+        c.fillStyle = 'rgba(200,205,220,0.25)'; c.fillRect(bx - 2, top, 1.2, h - 6);
+        c.fillStyle = '#6d6979';
+        c.beginPath(); c.moveTo(bx - 3, bottomY - 7); c.lineTo(bx + 3, bottomY - 7); c.lineTo(bx, bottomY + 1); c.closePath(); c.fill();
+      }
+      // horizontal bars
+      for (let yy = bottomY - 16; yy > top; yy -= 20) {
+        c.fillStyle = '#56525f'; c.fillRect(x - half, yy - 2.5, W, 5);
+        c.fillStyle = 'rgba(200,205,220,0.2)'; c.fillRect(x - half, yy - 2, W, 1);
+        for (let i = 0; i < 5; i++) { // rivets
+          const bx = x - half + 3 + i * ((W - 6) / 4);
+          c.fillStyle = '#6a6773'; c.beginPath(); c.arc(bx, yy, 1.4, 0, Math.PI * 2); c.fill();
+        }
+      }
+      c.restore();
+    }
+    if (o.warn) { // dust trickling from the slot
+      for (let i = 0; i < 6; i++) {
+        const u = (t * 1.1 + i / 6) % 1, dx = Math.sin(i * 7.3) * half;
+        c.fillStyle = 'rgba(200,195,185,' + (0.8 * (1 - u)).toFixed(2) + ')';
+        c.beginPath(); c.arc(x + dx, ceilY + 4 + u * 30, 1.1, 0, Math.PI * 2); c.fill();
+      }
+    }
+    c.restore();
+  }
+
+  G.art = { drawPortcullis, drawSkeleton, drawRock, drawWeb, drawTorch, drawPuzzleCandle, drawDoor, drawScroll, drawVortex, drawGhost, drawGhostCone, drawBackground, drawTiles, drawIvy, drawSleeper, drawWalker, drawZzz, drawHideSpot, drawTrap, drawDeco, drawCrow, drawSpider, drawThread, drawLight, drawBubble, drawCard };
 })();
 
 // ===== player.js =====
@@ -4729,6 +4789,8 @@ window.G.CFG = {
 
     // ---------- queries ----------
     isSolid(tx, ty) {
+      // a shut portcullis is a wall (only while fully down)
+      for (const r of this.rocks) if (r.state === 'rest' && tx === Math.floor(r.x / T) && ty * T >= r.ceilY && ty * T < r.floorY) return true;
       const d = this.door;
       if (!d || d.open > DOOR_PASS) return false;
       return tx >= d.tx && tx <= d.tx + 1 && ty >= d.ty - 2 && ty <= d.ty;
@@ -4868,14 +4930,16 @@ window.G.CFG = {
       for (const r of this.rocks) {
         const b = mod(beat + r.offset, LOOP), fb = r.fallBeats;
         const was = r.state;
+        // portcullis: chains rattle (1 beat) -> slams down -> stays shut (1 beat) -> rises again (1 beat) -> open
         if (b < 1) { r.state = 'warn'; r.k = b; r.y = r.top; }
         else if (b < 1 + fb) { r.state = 'fall'; r.k = (b - 1) / fb; r.y = r.top + (r.floorY - r.top) * r.k * r.k; }
         else if (b < 2 + fb) { r.state = 'rest'; r.k = (b - 1 - fb); r.y = r.floorY; }
+        else if (b < 3 + fb) { r.state = 'rise'; r.k = (b - 2 - fb); r.y = r.floorY - (r.floorY - r.top) * (0.5 - 0.5 * Math.cos(r.k * Math.PI)); }
         else { r.state = 'hang'; r.k = 0; r.y = r.top; }
         if (was === 'fall' && r.state === 'rest') {
           const d = this.player ? Math.hypot(this.player.x - r.x, this.player.y - r.floorY) : 1e9;
           const vol = G.util.clamp(1 - d / (12 * T), 0, 1);
-          if (vol > 0 && !this.paused) sfx('land', { vol });
+          if (vol > 0 && !this.paused) { sfx('land', { vol }); sfx('chandelier', { vol: vol * 0.7 }); }
         }
       }
       for (const c of this.candles) if (c.puff > 0) c.puff = Math.max(0, c.puff - (this._lastDt || 1 / 60) / PUFF_TIME);
@@ -4967,7 +5031,9 @@ window.G.CFG = {
         else this._ph(ctx, 'scroll', this.scroll, glow);
       }
       for (const r of this.rocks) {
-        if (A.drawRock) { // art: 'warn' anchors at the ceiling, 'fall'/'rest' at the rock centre (r.y is the rock bottom)
+        if (A.drawPortcullis) {
+          A.drawPortcullis(ctx, r.x, r.ceilY, r.state === 'hang' || r.state === 'warn' ? r.top - 18 : r.y, { warn: r.state === 'warn', t, state: r.state });
+        } else if (A.drawRock) {
           const warn = r.state === 'hang' || r.state === 'warn';
           A.drawRock(ctx, r.x, warn ? r.ceilY : r.y - 15, { state: warn ? 'warn' : r.state, k: warn ? 0 : r.k, t: r.state === 'hang' ? 0 : t });
         }
@@ -5182,7 +5248,7 @@ window.G.CFG = {
     L.low(31, 37, 5).rock(34, 0).deco(30, 'tomb').chain(33).chain(36);
     L.hide(42, 'armor').deco(45, 'urn');
     // 3. cobweb passage, then a ghost on patrol
-    L.cweb(48, 3).cobweb(47).chain(50).deco(53, 'bones');
+    L.cweb(48, 3).cobweb(47).chain(50).deco(53, 'bones').ghost(52, 55, 3.5, 35); // tearing the web turns this ghost
     L.hide(55, 'curtain').ghost(59, 63, 4, 40).deco(65, 'coffin').chain(60);
     L.hide(69, 'armor');
     // 4. dark zone with two torches
@@ -5207,7 +5273,7 @@ window.G.CFG = {
     L.low(38, 46, 5).rock(40, 0).rock(44, 2).chain(42).deco(49, 'urn').hide(52, 'curtain');
     // webs with a ghost between them
     L.cweb(56, 3).cobweb(55).ghost(62, 66, 4, 40).hide(60, 'armor').deco(68, 'coffin').hide(70, 'curtain');
-    L.cweb(73, 3).chain(74).deco(76, 'skulls');
+    L.cweb(73, 3).chain(74).deco(76, 'skulls').ghost(78, 82, 3.5, 35); // tearing the web turns this ghost
     // dark zone: web, stone, two torches
     L.hide(77, 'armor').dark(79, 19).torch(81, 0).torch(96, 0).deco(84, 'tomb').cobweb(80);
     L.cweb(87, 2).low(89, 93, 5).rock(91, 4).chain(90).deco(94, 'bones');
@@ -5271,7 +5337,7 @@ window.G.CFG = {
     if (page === 'controls') return [{ id: 'back' }];
     const list = [{ id: 'new' }];
     if (G.save.get('progress', 0) > 0) list.push({ id: 'continue' });
-    list.push({ id: 'lang' }, { id: 'music' }, { id: 'controls' });
+    list.push({ id: 'lang' }, { id: 'music' }, { id: 'hints' }, { id: 'controls' });
     return list;
   }
   function label(id) {
@@ -5280,6 +5346,7 @@ window.G.CFG = {
       case 'continue': return T('menu_continue');
       case 'lang': return T('menu_lang') + ': ' + T('lang_name');
       case 'music': return T('menu_music') + ': ' + T(musicOn() ? 'on' : 'off');
+      case 'hints': return T('menu_hints') + ': ' + T(G.save.get('hints', true) !== false ? 'on' : 'off');
       case 'controls': return T('menu_controls');
       case 'back': return T('menu_back');
     }
@@ -5291,6 +5358,7 @@ window.G.CFG = {
       case 'continue': sfx('ui_ok'); startGame(G.save.get('progress', 0)); break;
       case 'lang': sfx('ui_ok'); G.i18n.setLang(G.i18n.lang === 'hu' ? 'en' : 'hu'); break;
       case 'music': sfx('ui_ok'); setMusic(!musicOn()); break;
+      case 'hints': sfx('ui_ok'); G.save.set('hints', G.save.get('hints', true) === false); break;
       case 'controls': sfx('ui_ok'); page = 'controls'; sel = 0; break;
       case 'back': {
         sfx('ui_ok');
@@ -5361,7 +5429,7 @@ window.G.CFG = {
         if (G.input.pressed('confirm') || G.input.pressed('action') || G.input.pressed('back')) activate('back');
         return;
       }
-      if ((G.input.pressed('left') || G.input.pressed('right')) && (id === 'lang' || id === 'music')) {
+      if ((G.input.pressed('left') || G.input.pressed('right')) && (id === 'lang' || id === 'music' || id === 'hints')) {
         activate(id);
       } else if (G.input.pressed('confirm') || G.input.pressed('action')) {
         activate(id);
@@ -6016,12 +6084,14 @@ window.G.CFG = {
     hint() {
       const p = this.player;
       if (this.mode !== 'play') return '';
+      if (G.save.get('hints', true) === false) return ''; // hints switched off in the menu
       if (p.state === 'hidden') return t('hint_unhide');
       if (this.stealth.nearestHide()) return t('hint_hide');
       if (this.dungeon && this.dungeon.nearestAction) { const k = this.dungeon.nearestAction(); if (k) return t(k); }
       if (this.dungeon) {
         const D = this.dungeon;
         if (D.webs.some((w) => !w.torn && p.x > w.x - 3 * T && p.x < w.x + (w.len + 1) * T && Math.abs(p.y - w.y) < T)) return t('hint_web');
+        if (D.rocks.some((r) => Math.abs(r.x - p.x) < 4 * T && Math.abs(r.floorY - p.y) < T)) return t('hint_gate');
         if (D.skeletons.some((s) => Math.abs((s.c != null ? s.c : s.a.x) - p.x) < 5 * T && Math.abs(s.y - p.y) < T)) return t('hint_skeleton');
       }
       if (U.dist(p.x, p.y, this.door.x, this.door.y) < T * 3) return t('hint_exit');

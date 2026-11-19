@@ -40,7 +40,7 @@
     if (page === 'controls') return [{ id: 'back' }];
     const list = [{ id: 'new' }];
     if (G.save.get('progress', 0) > 0) list.push({ id: 'continue' });
-    list.push({ id: 'lang' }, { id: 'music' }, { id: 'controls' });
+    list.push({ id: 'lang' }, { id: 'music' }, { id: 'hints' }, { id: 'controls' });
     return list;
   }
   function label(id) {
@@ -49,6 +49,7 @@
       case 'continue': return T('menu_continue');
       case 'lang': return T('menu_lang') + ': ' + T('lang_name');
       case 'music': return T('menu_music') + ': ' + T(musicOn() ? 'on' : 'off');
+      case 'hints': return T('menu_hints') + ': ' + T(G.save.get('hints', true) !== false ? 'on' : 'off');
       case 'controls': return T('menu_controls');
       case 'back': return T('menu_back');
     }
@@ -60,6 +61,7 @@
       case 'continue': sfx('ui_ok'); startGame(G.save.get('progress', 0)); break;
       case 'lang': sfx('ui_ok'); G.i18n.setLang(G.i18n.lang === 'hu' ? 'en' : 'hu'); break;
       case 'music': sfx('ui_ok'); setMusic(!musicOn()); break;
+      case 'hints': sfx('ui_ok'); G.save.set('hints', G.save.get('hints', true) === false); break;
       case 'controls': sfx('ui_ok'); page = 'controls'; sel = 0; break;
       case 'back': {
         sfx('ui_ok');
@@ -130,7 +132,7 @@
         if (G.input.pressed('confirm') || G.input.pressed('action') || G.input.pressed('back')) activate('back');
         return;
       }
-      if ((G.input.pressed('left') || G.input.pressed('right')) && (id === 'lang' || id === 'music')) {
+      if ((G.input.pressed('left') || G.input.pressed('right')) && (id === 'lang' || id === 'music' || id === 'hints')) {
         activate(id);
       } else if (G.input.pressed('confirm') || G.input.pressed('action')) {
         activate(id);

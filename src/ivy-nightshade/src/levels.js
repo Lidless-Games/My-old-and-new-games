@@ -179,7 +179,7 @@
     L.low(31, 37, 5).rock(34, 0).deco(30, 'tomb').chain(33).chain(36);
     L.hide(42, 'armor').deco(45, 'urn');
     // 3. cobweb passage, then a ghost on patrol
-    L.cweb(48, 3).cobweb(47).chain(50).deco(53, 'bones');
+    L.cweb(48, 3).cobweb(47).chain(50).deco(53, 'bones').ghost(52, 55, 3.5, 35); // tearing the web turns this ghost
     L.hide(55, 'curtain').ghost(59, 63, 4, 40).deco(65, 'coffin').chain(60);
     L.hide(69, 'armor');
     // 4. dark zone with two torches
@@ -204,7 +204,7 @@
     L.low(38, 46, 5).rock(40, 0).rock(44, 2).chain(42).deco(49, 'urn').hide(52, 'curtain');
     // webs with a ghost between them
     L.cweb(56, 3).cobweb(55).ghost(62, 66, 4, 40).hide(60, 'armor').deco(68, 'coffin').hide(70, 'curtain');
-    L.cweb(73, 3).chain(74).deco(76, 'skulls');
+    L.cweb(73, 3).chain(74).deco(76, 'skulls').ghost(78, 82, 3.5, 35); // tearing the web turns this ghost
     // dark zone: web, stone, two torches
     L.hide(77, 'armor').dark(79, 19).torch(81, 0).torch(96, 0).deco(84, 'tomb').cobweb(80);
     L.cweb(87, 2).low(89, 93, 5).rock(91, 4).chain(90).deco(94, 'bones');
