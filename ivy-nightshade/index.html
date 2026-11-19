@@ -8170,11 +8170,27 @@ window.G.CFG = {
         ctx.fillStyle = locked ? '#fff' : '#241f2e'; ctx.font = 'bold ' + (big ? 12 : 8) + 'px sans-serif';
         ctx.fillText(String(nums.get(d.id) || ''), cx, cy + 0.5);
       }
+      const bag = S.bag, T0 = CFG.TILE;
+      if (bag && bag.keys && Object.values(bag.keys).some(Boolean)) {
+        const bx = X(bag.x / T0), by = Y(bag.y / T0 - 1);
+        const col = ['red', 'blue', 'green'].find((c) => bag.keys[c]);
+        ctx.save(); ctx.translate(bx, by); ctx.scale(big ? 0.8 : 0.5, big ? 0.8 : 0.5);
+        if (G.art.drawKey) G.art.drawKey(ctx, 0, 0, { color: col, t: G.time }); ctx.restore();
+      }
       const p = this.player, T_ = CFG.TILE;
       ctx.fillStyle = '#fff'; ctx.strokeStyle = '#241f2e'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(X(p.x / T_), Y(p.y / T_ - 0.7), big ? 5 : 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       if (!big) { ctx.fillStyle = 'rgba(239,230,208,0.7)'; ctx.font = '10px Georgia, serif'; ctx.fillText(t('map_hint'), ox + mw / 2, oy + mh + 10); }
       ctx.restore();
+    }
+    drawBagMarker(ctx) { // the bag left at the hiding spot: its keys float above it so the spot is easy to spot
+      const b = this.school.bag; if (!b || !G.art.drawKey) return;
+      const cols = ['red', 'blue', 'green'].filter((c) => b.keys && b.keys[c]); if (!cols.length) return;
+      const bob = Math.sin(G.time * 3) * 4;
+      cols.forEach((c, i) => {
+        ctx.save(); ctx.translate(b.x + (i - (cols.length - 1) / 2) * 26, b.y - 3.4 * CFG.TILE + bob);
+        G.art.drawKey(ctx, 0, 0, { color: c, t: G.time }); ctx.restore();
+      });
     }
     drawDoorPlaques(ctx, cam) { // the door's pair number on a little plaque above every door in the world
       const nums = this.doorNumbers();
@@ -8464,7 +8480,7 @@ window.G.CFG = {
       this.traps.draw(ctx);
       this.stealth.draw(ctx);
       if (this.dungeon) this.dungeon.draw(ctx);
-      if (this.school) { this.school.draw(ctx); this.drawDoorPlaques(ctx, cam); }
+      if (this.school) { this.school.draw(ctx); this.drawDoorPlaques(ctx, cam); this.drawBagMarker(ctx); }
       if (this.npcs) this.npcs.draw(ctx);
       if (this.ghosts) this.ghosts.draw(ctx);
       if (!(this.mode === 'caught' && this.drawCaught(ctx)) && this.player.state !== 'hidden') this.player.draw(ctx);
