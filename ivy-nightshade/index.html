@@ -4975,6 +4975,7 @@ window.G.CFG = {
           this.candles[last].lit = true; P.lit.push(last);
           P.state = 'solved'; P.solved = true;
           if (this.door) { this.door.opening = true; sfx('door'); }
+          this._dismissSummoned();
           G.events.emit('door_open', { x: this.door ? this.door.x : 0, y: this.door ? this.door.y : 0 });
         }
       } else if (P.state === 'failing') {
@@ -4991,25 +4992,49 @@ window.G.CFG = {
       for (const tc of this.torches) tc.litT += dt;
     }
 
+    // a wrong candle set summons a ghost anywhere on the level (max MAX_GHOSTS summoned at once – the 4th makes the
+    // oldest summoned one vanish; the level's own ghosts don't count). Never on a hiding spot, at the door or next to Ivy,
+    // and at most one summoned ghost near the candles so the puzzle stays solvable.
+    _summonPoints() {
+      if (this._pts) return this._pts;
+      const w = this.world, pts = [];
+      for (let ty = 1; ty < w.rows - 1; ty++) for (let tx = 2; tx < w.cols - 2; tx++) {
+        const floor = w.isSolid(tx, ty + 1) || w.isOneWay(tx, ty + 1);
+        if (floor && !w.isSolid(tx, ty) && !w.isSolid(tx, ty - 1) && !w.isLadder(tx, ty)) pts.push({ x: (tx + 0.5) * T, y: (ty + 1) * T });
+      }
+      const hides = (this.level.entities || []).filter((e) => e.type === 'hide').map((e) => w.entPos(e));
+      const d = this.door;
+      this._pts = pts.filter((q) => !hides.some((h) => Math.abs(h.x - q.x) < 1.6 * T && Math.abs(h.y - q.y) < T) &&
+        !(d && Math.abs(d.x - q.x) < 3 * T && Math.abs(d.y - q.y) < 2 * T) &&
+        !(this.scroll && Math.abs(this.scroll.x - q.x) < 3 * T && Math.abs(this.scroll.y - q.y) < 2 * T));
+      return this._pts;
+    }
+    _nearCandles(q) {
+      if (!this.candles.length) return false;
+      const x0 = this.candles[0].x - 4 * T, x1 = this.candles[this.candles.length - 1].x + 4 * T;
+      return q.x > x0 && q.x < x1 && Math.abs(q.y - this.candles[0].y) < 3 * T;
+    }
     _summon() {
       const gh = this.ghosts, p = this.player;
-      if (!gh || !gh.add || !this.spawns.length) return;
-      let pool = this.spawns.filter((s) => Math.hypot(s.x - p.x, (s.y - p.y) * 0.5) >= 2 * T);
-      if (!pool.length) {
-        let far = null, fd = -1;
-        for (const s of this.spawns) { const dd = Math.hypot(s.x - p.x, s.y - p.y); if (dd > fd) { fd = dd; far = s; } }
-        pool = [far];
-      }
-      const sp = G.util.choice(pool);
+      if (!gh || !gh.add) return;
       this._summoned = this._summoned.filter((g) => gh.ghosts.indexOf(g) >= 0);
-      if (gh.ghosts.length >= MAX_GHOSTS) {
-        const victim = this._summoned.length ? this._summoned.shift() : gh.ghosts[0];
-        gh.remove(victim);
-      }
+      if (this._summoned.length >= MAX_GHOSTS) gh.remove(this._summoned.shift()); // the 4th summon: the oldest vanishes
+      const candleTaken = this._summoned.some((g) => this._nearCandles(g));
+      let pool = this._summonPoints().filter((q) => Math.hypot(q.x - p.x, q.y - p.y) >= 5 * T && !(candleTaken && this._nearCandles(q)) &&
+        !this._summoned.some((g) => Math.abs(g.x - q.x) < 6 * T && Math.abs(g.y - q.y) < 2 * T));
+      if (!pool.length) pool = this.spawns.filter((s) => Math.hypot(s.x - p.x, s.y - p.y) >= 3 * T);
+      if (!pool.length) return;
+      const sp = G.util.choice(pool);
       const g = gh.add(sp.x, sp.y);
+      g.summoned = true;
       this._summoned.push(g);
       sfx('stir', { vol: 0.7 });
       G.events.emit('ghost_summoned', { x: sp.x, y: sp.y, ghost: g });
+    }
+    _dismissSummoned() { // puzzle solved: the summoned ghosts leave
+      const gh = this.ghosts; if (!gh) return;
+      for (const g of this._summoned) if (gh.ghosts.indexOf(g) >= 0) gh.remove(g);
+      this._summoned = [];
     }
 
     // ---------- drawing ----------
