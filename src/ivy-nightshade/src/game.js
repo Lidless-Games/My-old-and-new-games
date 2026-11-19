@@ -95,6 +95,7 @@
       this.player.control = false;
       G.events.on('caught', (d) => this.beginCaught(d));
       G.events.on('door_open', () => { this.toast = { text: t('door_open'), tt: 2.5 }; sfx('door'); });
+      G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
       G.events.on('ghost_summoned', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_wrong_candles'), 'ivy', 3); this.bubbles[0].follow = true; });
       G.events.on('checkpoint', (d) => { this.toast = { text: t('checkpoint'), tt: 2 }; this.trail = [{ x: d.x, y: d.y, st: 'idle' }]; });
       this.trail = [{ x: sp.x, y: sp.y, st: 'idle' }];

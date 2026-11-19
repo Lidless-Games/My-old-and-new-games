@@ -25,7 +25,7 @@ window.G.CFG = {
   // chandelier / crouch
   CROUCH_H: 32, CHANDELIER_AMP_DEG: 22, CHANDELIER_CLEAR: 36,
   // caught sequence (seconds)
-  CAUGHT_FREEZE: 3.5, CAUGHT_FALL: 0.8, SPIDER_DESCEND: 1.4, DRAG_SPEED: 110, DRAG_MAX: 5, GETUP_TIME: 2.4, TRAP_OFF_DELAY: 0.7, GHOST_HEAR_RADIUS: 3.5, WEB_SLOW: 0.45, DARK_STRENGTH: 0.93, DEATH_FX_T: 1.1, RUN_BACK_SPEED: 210,
+  CAUGHT_FREEZE: 3.5, CAUGHT_FALL: 0.8, SPIDER_DESCEND: 1.4, DRAG_SPEED: 110, DRAG_MAX: 5, GETUP_TIME: 2.4, TRAP_OFF_DELAY: 0.7, GHOST_HEAR_RADIUS: 3.5, WEB_SLOW: 0.45, DARK_STRENGTH: 0.93, SUMMON_IDLE: 20, DEATH_FX_T: 1.1, RUN_BACK_SPEED: 210,
   PAL: {
     plum: '#241f2e', plumDeep: '#17131e', plumLight: '#3a3247', bordeaux: '#6b2e3e', bordeauxLight: '#8e4256',
     moon: '#c9cfe0', moonDim: '#8d93a8', skin: '#f2ece4', ink: '#141018', amber: '#f3a03a', amberLight: '#f7c873',
@@ -193,6 +193,9 @@ window.G.CFG = {
       menu_lang: 'Nyelv',
       menu_music: 'Zene',
       menu_hints: 'Tippek',
+      ghost_leave_1: 'Vaklárma, leléptem.',
+      ghost_leave_2: 'Ennyi volt? Unalmas. Mentem.',
+      ghost_leave_3: 'Na jó, én hazaúszom.',
       menu_controls: 'Irányítás',
       menu_back: 'Vissza',
       on: 'be',
@@ -279,6 +282,9 @@ window.G.CFG = {
       menu_lang: 'Language',
       menu_music: 'Music',
       menu_hints: 'Hints',
+      ghost_leave_1: 'False alarm, I\'m off.',
+      ghost_leave_2: 'That\'s it? Boring. Bye.',
+      ghost_leave_3: 'Right, I\'m floating home.',
       menu_controls: 'Controls',
       menu_back: 'Back',
       on: 'on',
@@ -4858,6 +4864,7 @@ window.G.CFG = {
       const p = this.player, beat = beatNow();
       this._animate(beat);
       if (init || this.paused) return;
+      this._idleGhosts(dt);
       const hidden = p.state === 'hidden';
       const pr = p.rect();
 
@@ -4955,6 +4962,7 @@ window.G.CFG = {
     // ---------- candle puzzle ----------
     _lightCandle(c) {
       const P = this.puzzle;
+      this._calmT = 0;
       c.lit = true; sfx('creak', { vol: 0.35 });
       P.lit.push(c.i);
       while (P.lit.length > 3) { const o = P.lit.shift(); this.candles[o].lit = false; this.candles[o].puff = 1; }
@@ -5032,10 +5040,22 @@ window.G.CFG = {
       if (!pool.length) return;
       const sp = G.util.choice(pool);
       const g = gh.add(sp.x, sp.y);
-      g.summoned = true;
+      g.summoned = true; this._calmT = 0;
       this._summoned.push(g);
       sfx('stir', { vol: 0.7 });
       G.events.emit('ghost_summoned', { x: sp.x, y: sp.y, ghost: g });
+    }
+    // after CFG.SUMMON_IDLE s without candle activity the summoned ghosts get bored and leave one by one,
+    // so a stuck child can simply start the puzzle again
+    _idleGhosts(dt) {
+      if (!this._summoned.length || !this.ghosts) return;
+      this._calmT = (this._calmT || 0) + dt;
+      if (this._calmT < (CFG.SUMMON_IDLE ?? 20)) return;
+      const g = this._summoned.shift();
+      this._calmT -= 1.2; // the next one leaves 1.2 s later
+      if (this.ghosts.ghosts.indexOf(g) < 0) return;
+      G.events.emit('ghost_leave', { x: g.x, y: g.y });
+      this.ghosts.remove(g);
     }
     _dismissSummoned() { // puzzle solved: the summoned ghosts leave
       const gh = this.ghosts; if (!gh) return;
@@ -5772,6 +5792,7 @@ window.G.CFG = {
       this.player.control = false;
       G.events.on('caught', (d) => this.beginCaught(d));
       G.events.on('door_open', () => { this.toast = { text: t('door_open'), tt: 2.5 }; sfx('door'); });
+      G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
       G.events.on('ghost_summoned', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_wrong_candles'), 'ivy', 3); this.bubbles[0].follow = true; });
       G.events.on('checkpoint', (d) => { this.toast = { text: t('checkpoint'), tt: 2 }; this.trail = [{ x: d.x, y: d.y, st: 'idle' }]; });
       this.trail = [{ x: sp.x, y: sp.y, st: 'idle' }];

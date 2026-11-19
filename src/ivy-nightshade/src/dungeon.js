@@ -138,6 +138,7 @@
       const p = this.player, beat = beatNow();
       this._animate(beat);
       if (init || this.paused) return;
+      this._idleGhosts(dt);
       const hidden = p.state === 'hidden';
       const pr = p.rect();
 
@@ -235,6 +236,7 @@
     // ---------- candle puzzle ----------
     _lightCandle(c) {
       const P = this.puzzle;
+      this._calmT = 0;
       c.lit = true; sfx('creak', { vol: 0.35 });
       P.lit.push(c.i);
       while (P.lit.length > 3) { const o = P.lit.shift(); this.candles[o].lit = false; this.candles[o].puff = 1; }
@@ -312,10 +314,22 @@
       if (!pool.length) return;
       const sp = G.util.choice(pool);
       const g = gh.add(sp.x, sp.y);
-      g.summoned = true;
+      g.summoned = true; this._calmT = 0;
       this._summoned.push(g);
       sfx('stir', { vol: 0.7 });
       G.events.emit('ghost_summoned', { x: sp.x, y: sp.y, ghost: g });
+    }
+    // after CFG.SUMMON_IDLE s without candle activity the summoned ghosts get bored and leave one by one,
+    // so a stuck child can simply start the puzzle again
+    _idleGhosts(dt) {
+      if (!this._summoned.length || !this.ghosts) return;
+      this._calmT = (this._calmT || 0) + dt;
+      if (this._calmT < (CFG.SUMMON_IDLE ?? 20)) return;
+      const g = this._summoned.shift();
+      this._calmT -= 1.2; // the next one leaves 1.2 s later
+      if (this.ghosts.ghosts.indexOf(g) < 0) return;
+      G.events.emit('ghost_leave', { x: g.x, y: g.y });
+      this.ghosts.remove(g);
     }
     _dismissSummoned() { // puzzle solved: the summoned ghosts leave
       const gh = this.ghosts; if (!gh) return;
