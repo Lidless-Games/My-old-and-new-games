@@ -5020,8 +5020,14 @@ window.G.CFG = {
       this._summoned = this._summoned.filter((g) => gh.ghosts.indexOf(g) >= 0);
       if (this._summoned.length >= MAX_GHOSTS) gh.remove(this._summoned.shift()); // the 4th summon: the oldest vanishes
       const candleTaken = this._summoned.some((g) => this._nearCandles(g));
-      let pool = this._summonPoints().filter((q) => Math.hypot(q.x - p.x, q.y - p.y) >= 5 * T && !(candleTaken && this._nearCandles(q)) &&
-        !this._summoned.some((g) => Math.abs(g.x - q.x) < 6 * T && Math.abs(g.y - q.y) < 2 * T));
+      // they appear where the player can see them: between the last portcullis before the door and the door/scroll
+      const endX = this.door ? this.door.x - 3 * T : this.world.wpx;
+      const gates = this.rocks.map((r) => r.x).filter((x) => x < endX);
+      const startX = gates.length ? Math.max(...gates) + T : endX - 30 * T;
+      const area = (q) => q.x > startX && q.x < endX;
+      let pool = this._summonPoints().filter((q) => area(q) && Math.hypot(q.x - p.x, q.y - p.y) >= 4 * T && !(candleTaken && this._nearCandles(q)) &&
+        !this._summoned.some((g) => Math.abs(g.x - q.x) < 3.5 * T && Math.abs(g.y - q.y) < 2 * T));
+      if (!pool.length) pool = this._summonPoints().filter((q) => area(q) && Math.hypot(q.x - p.x, q.y - p.y) >= 2 * T && !(candleTaken && this._nearCandles(q)));
       if (!pool.length) pool = this.spawns.filter((s) => Math.hypot(s.x - p.x, s.y - p.y) >= 3 * T);
       if (!pool.length) return;
       const sp = G.util.choice(pool);
