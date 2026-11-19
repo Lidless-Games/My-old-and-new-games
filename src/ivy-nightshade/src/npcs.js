@@ -260,6 +260,7 @@
         else { ta.x += ta.dir * step; ta.facing = ta.dir; ta.walkT += dt; }
         if (ta.cool <= 0 && !(p && p.faded) && this._inCone(ta, eyeY, TA_VIEW, TA_ANG)) {
           ta.state = 'run'; ta.timer = 0; ta.facing = p.x >= ta.x ? 1 : -1;
+          G.events.emit('tattle_run', { x: ta.x, y: ta.y });
           sfx('stir', { vol: 0.7 });
         }
       } else if (ta.state === 'run') {

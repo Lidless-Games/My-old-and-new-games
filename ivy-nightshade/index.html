@@ -193,6 +193,9 @@ window.G.CFG = {
       menu_lang: 'Nyelv',
       menu_music: 'Zene',
       menu_hints: 'Tippek',
+      tattle_run: 'Ivy Nightshade fent van! Ezt megmondom az őr bácsinak!',
+      tattle_bribed: 'Mmm, cukor! …Kit? Nem láttam senkit.',
+      hint_tattle: 'Árulkodó! Ha meglát, szól az őrnek. Egy cukorkával megvesztegetheted (E).',
       map_title: 'Az iskola térképe',
       map_hint: 'M – térkép',
       ivy_locked_green: 'Zárva. A zöld kulcs kellene hozzá. Valahol biztosan megtalálom.',
@@ -309,6 +312,9 @@ window.G.CFG = {
       menu_lang: 'Language',
       menu_music: 'Music',
       menu_hints: 'Hints',
+      tattle_run: 'Ivy Nightshade is out of bed! I\'m telling the caretaker!',
+      tattle_bribed: 'Mmm, candy! …Who? I didn\'t see anybody.',
+      hint_tattle: 'A tattletale! If he sees you, he tells the caretaker. Bribe him with a sweet (E).',
       map_title: 'Map of the school',
       map_hint: 'M – map',
       ivy_locked_green: 'Locked. It needs the green key. It must be somewhere around here.',
@@ -2619,7 +2625,7 @@ window.G.CFG = {
       g.addColorStop(0, 'rgba(10,6,18,0)'); g.addColorStop(1, 'rgba(10,6,18,0.5)');
       v.fillStyle = g; v.fillRect(0, 0, VW, VH);
     }
-    if (theme === 'school_aula') schoolClockHands(c, off, dy, t);
+    // (the aula clock now lives in the room's foreground deco)
     c.drawImage(vignette, 0, 0);
   }
 
@@ -3985,6 +3991,14 @@ window.G.CFG = {
     const th = SBG[theme] || SBG.school_classroom;
     const s = document.createElement('canvas'); s.width = BGW; s.height = BGH;
     const c = s.getContext('2d');
+    // aula / classrooms / dining: a quiet wall only – windows, clocks, maps etc. come from the room's own (foreground) deco,
+    // otherwise the parallax wall and the deco overlap and the room looks doubled
+    if (theme === 'school_aula' || theme === 'school_classroom' || theme === 'school_dining') {
+      sWallpaper(c, th, theme === 'school_aula'); sWainscot(c, th, 440);
+      if (theme === 'school_dining') { rr(c, 0, 312, BGW, 6, 2); fs(c, '#5a3a2e', 1, 0.55); }
+      sFinish(c, 0.55, 0.55);
+      return s;
+    }
     if (theme === 'school_aula') {
       sWallpaper(c, th, true); sWainscot(c, th, 440);
       // two-storey: upper windows
@@ -6986,6 +7000,7 @@ window.G.CFG = {
         else { ta.x += ta.dir * step; ta.facing = ta.dir; ta.walkT += dt; }
         if (ta.cool <= 0 && !(p && p.faded) && this._inCone(ta, eyeY, TA_VIEW, TA_ANG)) {
           ta.state = 'run'; ta.timer = 0; ta.facing = p.x >= ta.x ? 1 : -1;
+          G.events.emit('tattle_run', { x: ta.x, y: ta.y });
           sfx('stir', { vol: 0.7 });
         }
       } else if (ta.state === 'run') {
@@ -7944,6 +7959,8 @@ window.G.CFG = {
       G.events.on('caught', (d) => this.beginCaught(d));
       G.events.on('door_open', () => { this.toast = { text: t('door_open'), tt: 2.5 }; sfx('door'); });
       G.events.on('locked', (d) => { const p = this.player; if (!this.bubbles.length) { this.say(p.x, p.y - 56, t('ivy_locked_' + d.color), 'ivy', 3.5); this.bubbles[0].follow = true; } });
+      G.events.on('tattle_run', (d) => { this.say(d.x, d.y - 60, t('tattle_run'), 'npc', 2.4); });
+      G.events.on('bribed', (d) => { this.say(d.x, d.y - 50, t('tattle_bribed'), 'npc', 3); });
       G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
       G.events.on('ghost_summoned', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_wrong_candles'), 'ivy', 3); this.bubbles[0].follow = true; });
       G.events.on('checkpoint', (d) => { this.toast = { text: t('checkpoint'), tt: 2 }; this.trail = [{ x: d.x, y: d.y, st: 'idle' }]; });
@@ -8445,6 +8462,7 @@ window.G.CFG = {
       if (this.stealth.nearestHide()) return t('hint_hide');
       if (this.school && this.school.nearestAction) { const k = this.school.nearestAction(); if (k) return t(k); }
       if (this.npcs && this.npcs.nearestAction) { const k = this.npcs.nearestAction(); if (k) return t(k); }
+      if (this.npcs && this.npcs.tattles && this.npcs.tattles.some((ta) => ta.state !== 'eat' && Math.abs(ta.x - p.x) < 7 * T && Math.abs(ta.y - p.y) < 2 * T)) return t('hint_tattle');
       if (this.npcs && this.npcs.janitors && this.npcs.janitors.some((j) => Math.abs(j.x - p.x) < 9 * T && Math.abs(j.y - p.y) < 2 * T)) return t('hint_janitor');
       if (this.dungeon && this.dungeon.nearestAction) { const k = this.dungeon.nearestAction(); if (k) return t(k); }
       if (this.dungeon) {

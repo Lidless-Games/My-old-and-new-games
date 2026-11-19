@@ -1734,7 +1734,7 @@
       g.addColorStop(0, 'rgba(10,6,18,0)'); g.addColorStop(1, 'rgba(10,6,18,0.5)');
       v.fillStyle = g; v.fillRect(0, 0, VW, VH);
     }
-    if (theme === 'school_aula') schoolClockHands(c, off, dy, t);
+    // (the aula clock now lives in the room's foreground deco)
     c.drawImage(vignette, 0, 0);
   }
 
@@ -3100,6 +3100,14 @@
     const th = SBG[theme] || SBG.school_classroom;
     const s = document.createElement('canvas'); s.width = BGW; s.height = BGH;
     const c = s.getContext('2d');
+    // aula / classrooms / dining: a quiet wall only – windows, clocks, maps etc. come from the room's own (foreground) deco,
+    // otherwise the parallax wall and the deco overlap and the room looks doubled
+    if (theme === 'school_aula' || theme === 'school_classroom' || theme === 'school_dining') {
+      sWallpaper(c, th, theme === 'school_aula'); sWainscot(c, th, 440);
+      if (theme === 'school_dining') { rr(c, 0, 312, BGW, 6, 2); fs(c, '#5a3a2e', 1, 0.55); }
+      sFinish(c, 0.55, 0.55);
+      return s;
+    }
     if (theme === 'school_aula') {
       sWallpaper(c, th, true); sWainscot(c, th, 440);
       // two-storey: upper windows
