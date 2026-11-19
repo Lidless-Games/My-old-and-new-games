@@ -37,7 +37,7 @@
   let rects = [];      // hit rects of the last drawn frame: {x,y,w,h,index}
 
   function items() {
-    if (page === 'controls') return [{ id: 'back' }];
+    if (page === 'controls') return G.touchMode ? [{ id: 'hand' }, { id: 'back' }] : [{ id: 'back' }];
     const list = [{ id: 'new' }];
     if (G.save.get('progress', 0) > 0) list.push({ id: 'continue' });
     list.push({ id: 'lang' }, { id: 'music' }, { id: 'hints' }, { id: 'controls' });
@@ -51,6 +51,7 @@
       case 'music': return T('menu_music') + ': ' + T(musicOn() ? 'on' : 'off');
       case 'hints': return T('menu_hints') + ': ' + T(G.save.get('hints', true) !== false ? 'on' : 'off');
       case 'controls': return T('menu_controls');
+      case 'hand': return T('menu_hand') + ': ' + T(G.save.get('lefty', false) === true ? 'hand_right' : 'hand_left');
       case 'back': return T('menu_back');
     }
     return id;
@@ -63,6 +64,7 @@
       case 'music': sfx('ui_ok'); setMusic(!musicOn()); break;
       case 'hints': sfx('ui_ok'); G.save.set('hints', G.save.get('hints', true) === false); break;
       case 'controls': sfx('ui_ok'); page = 'controls'; sel = 0; break;
+      case 'hand': sfx('ui_ok'); G.save.set('lefty', G.save.get('lefty', false) !== true); break;
       case 'back': {
         sfx('ui_ok');
         page = 'main';
@@ -132,7 +134,7 @@
         if (G.input.pressed('confirm') || G.input.pressed('action') || G.input.pressed('back')) activate('back');
         return;
       }
-      if ((G.input.pressed('left') || G.input.pressed('right')) && (id === 'lang' || id === 'music' || id === 'hints')) {
+      if ((G.input.pressed('left') || G.input.pressed('right')) && (id === 'lang' || id === 'music' || id === 'hints' || id === 'hand')) {
         activate(id);
       } else if (G.input.pressed('confirm') || G.input.pressed('action')) {
         activate(id);
@@ -179,12 +181,12 @@
         ctx.font = '20px ' + FONT;
         ctx.fillStyle = PAL.cream;
         for (let i = 1; i <= 6; i++) {
-          ctx.fillText(T('controls_' + i), W / 2, 248 + (i - 1) * 36);
+          ctx.fillText(T((G.touchMode ? 'controls_t' : 'controls_') + i), W / 2, 248 + (i - 1) * 36);
         }
       }
 
       const list = items();
-      const y0 = page === 'controls' ? 470 : MAIN_Y0;
+      const y0 = page === 'controls' ? (list.length > 1 ? 462 : 470) : MAIN_Y0;
       list.forEach((it, i) => {
         const y = y0 + i * MAIN_STEP;
         const r = { x: W / 2 - 200, y: y - 30, w: 400, h: 42, index: i };

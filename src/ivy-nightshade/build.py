@@ -3,7 +3,7 @@
 import os, sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 ORDER = ['config.js', 'core.js', 'i18n.js', 'rhythm.js', 'art.js', 'player.js', 'stealth.js',
-         'traps.js', 'ghosts.js', 'dungeon.js', 'school.js', 'npcs.js', 'levels.js', 'ui.js', 'game.js', 'main.js']
+         'traps.js', 'ghosts.js', 'dungeon.js', 'school.js', 'npcs.js', 'levels.js', 'ui.js', 'touch.js', 'game.js', 'main.js']
 parts = []
 for f in ORDER:
     p = os.path.join(ROOT, 'src', f)
@@ -24,7 +24,7 @@ canvas{{display:block;image-rendering:auto;touch-action:none}}</style>
 <script>
 {js}
 </script></body></html>'''
-os.makedirs(os.path.join(ROOT, '..', '..', 'ivy-nightshade'), exist_ok=True)
-out = os.path.join(ROOT, '..', '..', 'ivy-nightshade', 'index.html')
+os.makedirs(os.path.join(ROOT, 'dist'), exist_ok=True)
+out = os.path.join(ROOT, 'dist', 'ivy-nightshade.html')
 open(out, 'w', encoding='utf-8').write(html)
 print('built', out, len(html), 'bytes')

@@ -353,7 +353,7 @@
       const p = this.player, T_ = CFG.TILE;
       ctx.fillStyle = '#fff'; ctx.strokeStyle = '#241f2e'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(X(p.x / T_), Y(p.y / T_ - 0.7), big ? 5 : 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      if (!big) { ctx.fillStyle = 'rgba(239,230,208,0.7)'; ctx.font = '10px Georgia, serif'; ctx.fillText(t('map_hint'), ox + mw / 2, oy + mh + 10); }
+      if (!big) { ctx.fillStyle = 'rgba(239,230,208,0.7)'; ctx.font = '10px Georgia, serif'; ctx.fillText(t(G.touchMode ? 'map_hint_t' : 'map_hint'), ox + mw / 2, oy + mh + 10); }
       ctx.restore();
     }
     // the nest is never in the arrival room or a room right next to it (a door away), so Ivy has to search a bit
