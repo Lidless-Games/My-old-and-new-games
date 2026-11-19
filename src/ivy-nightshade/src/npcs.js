@@ -48,7 +48,10 @@
           });
           { const j = this.janitors[this.janitors.length - 1]; j.home = { y: j.y, from: j.from, to: j.to, seg: j.seg }; }
         } else if (e.type === 'twins') {
-          this.twins.push({ x: p.x, y: p.y, facing: b >= e.tx ? 1 : -1, cd: TW_FIRST, throwK: 0 });
+          const seg = segment(world, p.x, p.y);
+          let hideX = p.x; // they duck under the nearest long table in their room
+          (level.entities || []).forEach((d) => { if (d.type === 'deco' && d.kind === 'long_table') { const q = world.entPos(d); if (Math.abs(q.y - p.y) < T && q.x >= seg.l && q.x <= seg.r && (hideX === p.x || Math.abs(q.x - p.x) < Math.abs(hideX - p.x))) hideX = q.x; } });
+          this.twins.push({ x: p.x, y: p.y, homeX: p.x, hideX, seg, facing: b >= e.tx ? 1 : -1, homeFacing: b >= e.tx ? 1 : -1, cd: TW_FIRST, throwK: 0, mode: 'play', clearT: 0, walkT: 0 });
         } else if (e.type === 'tattle') {
           this.tattles.push({
             x: p.x, y: p.y, from, to, startX: p.x, startFacing: b >= e.tx ? 1 : -1, facing: b >= e.tx ? 1 : -1, dir: b >= e.tx ? 1 : -1,
@@ -135,7 +138,7 @@
         j.visit = null;
         j.x = j.startX; j.facing = j.startFacing; j.dir = j.startFacing; j.state = 'patrol'; j.timer = 0; j.notice = 0; j.alert = 0;
       }
-      for (const tw of this.twins) { tw.cd = TW_FIRST; tw.throwK = 0; }
+      for (const tw of this.twins) { tw.cd = TW_FIRST; tw.throwK = 0; tw.mode = 'play'; tw.x = tw.homeX; tw.facing = tw.homeFacing; tw.clearT = 0; }
       for (const ta of this.tattles) {
         ta.x = ta.startX; ta.facing = ta.startFacing; ta.dir = ta.startFacing; ta.timer = 0; ta.cool = 0; ta.target = null; ta.away = false; ta.door = null;
         ta.state = ta.bribed ? 'eat' : 'walk';
@@ -210,6 +213,23 @@
     _twins(tw, dt, p) {
       tw.throwK = Math.max(0, tw.throwK - dt * 2.5);
       tw.cd -= dt;
+      // the janitor is in their room: run and duck under the table, come out when he has gone
+      const jIn = this.janitors.some((j) => !j.away && Math.abs(j.y - tw.y) < T && j.x >= tw.seg.l - T && j.x <= tw.seg.r + T);
+      if (jIn && (tw.mode === 'play' || tw.mode === 'back')) { tw.mode = 'run'; tw.throwK = 0; G.events.emit('twins_hide', { x: tw.x, y: tw.y }); }
+      if (tw.mode === 'run' || tw.mode === 'back') {
+        const gx = tw.mode === 'run' ? tw.hideX : tw.homeX, sp = tw.mode === 'run' ? 150 : 60;
+        tw.facing = gx >= tw.x ? 1 : -1; tw.walkT += dt;
+        if (Math.abs(gx - tw.x) <= sp * dt) {
+          tw.x = gx;
+          if (tw.mode === 'run') { tw.mode = 'hid'; tw.clearT = 0; } else { tw.mode = 'play'; tw.facing = tw.homeFacing; tw.cd = Math.max(tw.cd, 1.2); }
+        } else tw.x += tw.facing * sp * dt;
+        return;
+      }
+      if (tw.mode === 'hid') {
+        tw.clearT = jIn ? 0 : tw.clearT + dt;
+        if (tw.clearT > 2) { tw.mode = 'back'; G.events.emit('twins_out', { x: tw.x, y: tw.y }); }
+        return;
+      }
       if (this._hidden()) return;
       const dx = (p.x - tw.x) * tw.facing;
       if (dx <= 0 || dx > TW_RANGE || Math.abs(p.y - tw.y) > 2 * T) return;
@@ -409,6 +429,12 @@
         }
       }
       for (const tw of this.twins) {
+        if (tw.mode === 'hid') { // two pairs of eyes peeking from under the table
+          const blink = Math.sin(t * 2.3 + tw.x) > 0.96;
+          ctx.fillStyle = '#efe6d0';
+          if (!blink) for (const ox of [-13, -6, 5, 12]) { ctx.beginPath(); ctx.arc(tw.x + ox, tw.y - 9, 1.6, 0, 7); ctx.fill(); }
+          continue;
+        }
         if (!art('drawTwins', ctx, tw.x, tw.y, { t, throwK: tw.throwK, facing: tw.facing })) {
           ctx.fillStyle = '#6b2e3e'; ctx.fillRect(tw.x - 14, tw.y - 38, 12, 38); ctx.fillRect(tw.x + 2, tw.y - 38, 12, 38);
         }
