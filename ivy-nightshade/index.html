@@ -2474,7 +2474,7 @@ window.G.CFG = {
     const cg = c.createLinearGradient(0, 0, 0, 80); cg.addColorStop(0, 'rgba(8,5,14,0.5)'); cg.addColorStop(1, 'rgba(8,5,14,0)'); c.fillStyle = cg; c.fillRect(0, 0, BGW, 80);
 
     // windows (period 480: two)
-    bgWindow(c, 120, 90, 74, 190, th, true, theme);
+    bgWindow(c, 120, 90, 74, 190, th, false, theme); // no moon in the repeating back wall (it looked like many moons)
     if (theme !== 'lab') bgWindow(c, 360, 110, 62, 160, th, false, theme);
 
     if (theme === 'bedroom') {
@@ -2587,7 +2587,13 @@ window.G.CFG = {
         archPath(c, -w / 2, -h, w, h);
         const gr = c.createLinearGradient(0, -h, 0, 0); gr.addColorStop(0, '#34457a'); gr.addColorStop(1, '#171a3c'); c.fillStyle = gr; c.fill();
         c.save(); archPath(c, -w / 2, -h, w, h); c.clip();
-        glow(c, 8, -h * 0.68, 46, 0.45, 'moon'); ell(c, 8, -h * 0.68, 10, 10); c.fillStyle = '#eef1fa'; c.fill();
+        { // one moon in the sky: a fixed point on screen, seen only through the window that is in front of it
+          const cam = G.camera || { x: 0, y: 0 }, MX = 700, MY = 150;
+          const mx = MX - (x - cam.x), my = MY - (y - cam.y);
+          if (mx > -w / 2 - 12 && mx < w / 2 + 12 && my > -h - 12 && my < 12) {
+            glow(c, mx, my, 46, 0.45, 'moon'); ell(c, mx, my, 10, 10); c.fillStyle = '#eef1fa'; c.fill();
+          }
+        }
         for (let i = 0; i < 5; i++) { c.beginPath(); c.arc(-w / 2 + 6 + hh(i, 11) * (w - 12), -h + 12 + hh(i, 12) * 40, 0.8, 0, TAU); c.fillStyle = 'rgba(230,235,255,0.7)'; c.fill(); }
         ell(c, -12, -h * 0.5, 16, 4); c.fillStyle = 'rgba(25,28,60,0.6)'; c.fill();
         c.restore();
