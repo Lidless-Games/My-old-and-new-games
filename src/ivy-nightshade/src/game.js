@@ -107,6 +107,7 @@
       G.events.on('door_open', () => { this.toast = { text: t('door_open'), tt: 2.5 }; sfx('door'); });
       G.events.on('locked', (d) => { const p = this.player; if (!this.bubbles.length) { this.say(p.x, p.y - 56, t('ivy_locked_' + d.color), 'ivy', 3.5); this.bubbles[0].follow = true; } });
       G.events.on('tattle_run', (d) => { this.say(d.x, d.y - 60, t('tattle_run'), 'npc', 2.4); });
+      G.events.on('janitor_enter', (d) => { this.say(d.x, d.y - 70, t('janitor_enter'), 'npc', 2.6); });
       G.events.on('bribed', (d) => { this.say(d.x, d.y - 50, t('tattle_bribed'), 'npc', 3); });
       G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
       G.events.on('ghost_summoned', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_wrong_candles'), 'ivy', 3); this.bubbles[0].follow = true; });

@@ -7,6 +7,7 @@
   const J_VIEW = 6, J_ANG = 25 * Math.PI / 180, J_EYE = 40, J_NOTICE = 0.4;
   const J_INVEST_MUL = 1.7, J_SEARCH = 5, J_TURN = 1.4, J_HEAR_WALK = 3 * T, J_PAUSE = 1.0;
   const TW_RANGE = 7 * T, TW_COOLDOWN = 3, TW_FIRST = 0.7, BALLOON_G = 900;
+  const TA_FETCH_T = 2.5, TA_VISIT_T = 9;
   const TA_VIEW = 5, TA_ANG = 28 * Math.PI / 180, TA_RUN = 150, TA_PATROL = 50, TA_COOLDOWN = 6;
   const CAT_HOME = 3 * T, CAT_STARTLE_R = 2.5 * T, CAT_VASE_R = 4 * T, CAT_COOLDOWN = 6, CAT_SPEED = 24;
   const BRIBE_R = 1.3 * T;
@@ -45,6 +46,7 @@
             facing: b >= e.tx ? 1 : -1, dir: b >= e.tx ? 1 : -1, state: 'patrol', timer: 0, notice: 0, alert: 0,
             target: p.x, seg: segment(world, p.x, p.y), walkT: 0, flip: 0,
           });
+          { const j = this.janitors[this.janitors.length - 1]; j.home = { y: j.y, from: j.from, to: j.to, seg: j.seg }; }
         } else if (e.type === 'twins') {
           this.twins.push({ x: p.x, y: p.y, facing: b >= e.tx ? 1 : -1, cd: TW_FIRST, throwK: 0 });
         } else if (e.type === 'tattle') {
@@ -129,11 +131,13 @@
     reset() {
       this._caught = false; this.balloons = [];
       for (const j of this.janitors) {
+        if (j.home) { j.y = j.home.y; j.from = j.home.from; j.to = j.home.to; j.seg = j.home.seg; }
+        j.visit = null;
         j.x = j.startX; j.facing = j.startFacing; j.dir = j.startFacing; j.state = 'patrol'; j.timer = 0; j.notice = 0; j.alert = 0;
       }
       for (const tw of this.twins) { tw.cd = TW_FIRST; tw.throwK = 0; }
       for (const ta of this.tattles) {
-        ta.x = ta.startX; ta.facing = ta.startFacing; ta.dir = ta.startFacing; ta.timer = 0; ta.cool = 0; ta.target = null;
+        ta.x = ta.startX; ta.facing = ta.startFacing; ta.dir = ta.startFacing; ta.timer = 0; ta.cool = 0; ta.target = null; ta.away = false; ta.door = null;
         ta.state = ta.bribed ? 'eat' : 'walk';
       }
       for (const c of this.cats) { c.x = c.startX; c.state = 'sit'; c.timer = 1.5; c.cool = 0; c.hop = 0; }
@@ -171,6 +175,7 @@
         return;
       }
       if (j.state === 'notice') { j.state = 'return'; j.notice = 0; }
+      if (j.visit && this._visitDone(j, dt)) return;
 
       // heard Ivy walking close by
       if (this._walking() && Math.abs(p.x - j.x) <= J_HEAR_WALK && Math.abs(p.y - j.y) < 2 * T && (j.state === 'patrol' || j.state === 'pause' || j.state === 'return' || j.state === 'search' || j.state === 'turn')) {
@@ -244,6 +249,25 @@
       }
     }
 
+    // a caretaker fetched by the tattle enters the room through the door, searches where Ivy was seen, then goes home
+    _visit(j, ta) {
+      const d = this.school.portals.reduce((a, q) => (!a || Math.abs(q.x - ta.x) + Math.abs(q.y - ta.y) < Math.abs(a.x - ta.x) + Math.abs(a.y - ta.y) ? q : a), null);
+      j.visit = { door: d, t: 0 };
+      j.x = d.x; j.y = d.y; j.seg = segment(this.world, d.x, d.y); j.from = j.seg.l + T; j.to = j.seg.r - T;
+      j.state = 'investigate'; j.target = clamp(ta.seenX, j.seg.l + T / 2, j.seg.r - T / 2); j.facing = j.target >= j.x ? 1 : -1;
+      sfx('door', { vol: 0.8 });
+      G.events.emit('janitor_enter', { x: j.x, y: j.y });
+    }
+    _visitDone(j, dt) { // after searching, he walks back to the door and returns to his own patrol
+      j.visit.t += dt;
+      if (j.visit.t < TA_VISIT_T || j.state === 'investigate' || j.state === 'search' || j.state === 'notice') return false;
+      if (this._walkTo(j, j.visit.door.x, j.speed, dt)) {
+        j.y = j.home.y; j.from = j.home.from; j.to = j.home.to; j.seg = j.home.seg; j.x = j.startX; j.visit = null; j.state = 'patrol';
+        sfx('door', { vol: 0.5 });
+      }
+      return true;
+    }
+
     _floorBelow(x, y) {
       const w = this.world; let r = w.toTile(y);
       while (r < w.rows && !w.isSolid(w.toTile(x), r)) r++;
@@ -258,7 +282,7 @@
         const target = ta.dir > 0 ? ta.to : ta.from, step = TA_PATROL * dt;
         if (ta.from === ta.to || Math.abs(target - ta.x) <= step) { ta.x = target; ta.dir = -ta.dir; ta.facing = ta.dir; }
         else { ta.x += ta.dir * step; ta.facing = ta.dir; ta.walkT += dt; }
-        if (ta.cool <= 0 && !(p && p.faded) && this._inCone(ta, eyeY, TA_VIEW, TA_ANG)) {
+        if (ta.cool <= 0 && this._inCone(ta, eyeY, TA_VIEW, TA_ANG)) { // standing still does not fool him
           ta.state = 'run'; ta.timer = 0; ta.facing = p.x >= ta.x ? 1 : -1;
           G.events.emit('tattle_run', { x: ta.x, y: ta.y });
           sfx('stir', { vol: 0.7 });
@@ -267,7 +291,7 @@
         ta.timer += dt;
         let jn = null, bd = 1e9;
         for (const j of this.janitors) {
-          if (Math.abs(j.y - ta.y) > 1.5 * T) continue;
+          if (Math.abs(j.y - ta.y) > 1.5 * T || j.x < ta.seg.l - T || j.x > ta.seg.r + T) continue; // only a caretaker in this very room
           const d = Math.abs(j.x - ta.x); if (d < bd) { bd = d; jn = j; }
         }
         if (jn) {
@@ -277,11 +301,23 @@
             ta.state = 'back'; ta.cool = TA_COOLDOWN;
           }
         } else {
-          // nobody to tell: runs away from Ivy and shouts
-          const away = p.x >= ta.x ? ta.seg.l : ta.seg.r;
-          this._walkTo(ta, away, TA_RUN, dt);
-          if (!ta.shouted) { ta.shouted = true; G.events.emit('noise', { x: ta.x, y: ta.y, radius: 8 * T, src: 'tattle' }); }
-          if (ta.timer > 3) { ta.state = 'back'; ta.cool = TA_COOLDOWN; }
+          // no caretaker in this room: run out through the nearest door and fetch one
+          if (!ta.door) {
+            ta.seenX = p.x; ta.seenY = p.y;
+            const doors = this.school && this.school.portals ? this.school.portals.filter((d) => Math.abs(d.y - ta.y) < 1.5 * T && d.x >= ta.seg.l - T && d.x <= ta.seg.r + T) : [];
+            ta.door = doors.reduce((a, d) => (!a || Math.abs(d.x - ta.x) < Math.abs(a.x - ta.x) ? d : a), null);
+            if (!ta.door) { ta.state = 'back'; ta.cool = TA_COOLDOWN; return; }
+          }
+          if (this._walkTo(ta, ta.door.x, TA_RUN, dt) || Math.abs(ta.door.x - ta.x) < 0.5 * T) {
+            ta.state = 'fetch'; ta.away = true; ta.timer = 0; sfx('door', { vol: 0.6 });
+          }
+        }
+      } else if (ta.state === 'fetch') { // off to the caretaker; a moment later they come back through the door
+        ta.timer += dt;
+        if (ta.timer > TA_FETCH_T) {
+          const j = this.janitors.filter((x) => !x.visit && x.state !== 'caught')[0];
+          ta.away = false; ta.state = 'back'; ta.cool = TA_COOLDOWN; ta.door = null;
+          if (j) this._visit(j, ta);
         }
       } else if (ta.state === 'back') {
         ta.shouted = false;
@@ -363,6 +399,7 @@
         }
       }
       for (const ta of this.tattles) {
+        if (ta.away) continue;
         const st = ta.state === 'eat' ? 'eat' : ta.state === 'run' ? 'run' : 'walk';
         if (!art('drawTattle', ctx, ta.x, ta.y, { facing: ta.facing, t: t + ta.walkT, state: st })) {
           ctx.fillStyle = st === 'run' ? '#f3a03a' : '#c9cfe0'; ctx.fillRect(ta.x - 8, ta.y - 40, 16, 40);
