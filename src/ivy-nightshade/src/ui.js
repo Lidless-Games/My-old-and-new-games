@@ -249,7 +249,7 @@
       ctx.fillText(T(opts.levelName), 20, 26);
       ctx.shadowBlur = 0;
     }
-    drawEye(ctx, W - 40, 30, clamp(opts.alert || 0, 0, 1));
+    // (the old wake-up eye meter was removed: with the strict sleeper rules it rarely showed anything)
     if (opts.hint) {
       const text = T(opts.hint);
       ctx.font = '18px ' + FONT;
