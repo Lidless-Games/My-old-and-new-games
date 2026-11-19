@@ -41,7 +41,7 @@
       lang_name: 'Magyar',
       controls_1: '← → / A D: mozgás',
       controls_2: 'Szóköz / ↑ / W: ugrás, ↑ ↓ létrán mászás',
-      controls_3: 'Shift (nyomva): osonás',
+      controls_3: 'Shift (nyomva): lopakodás',
       controls_4: '↓ / E búvóhely előtt: elbújás',
       controls_5: 'Esc / P: szünet',
       controls_6: 'Tipp: lépj a zene ütemére – úgy halkabb vagy.',
@@ -50,10 +50,10 @@
       hand_left: 'bal oldalon',
       hand_right: 'jobb oldalon',
       controls_t1: 'Joystick (a képernyő egyik oldalán): húzd oldalra a mozgáshoz',
-      controls_t2: 'Kicsit elhúzva osonás, jobban elhúzva járás',
+      controls_t2: 'Kicsit elhúzva lopakodás, jobban elhúzva járás',
       controls_t3: 'Joystick fel / le: létrán mászás',
       controls_t4: 'Joystick le búvóhely vagy ajtó előtt: elbújás, belépés',
-      controls_t5: '⤒ ugrás · 🐾 osonás be/ki · E cselekvés · ❚❚ szünet · ▦ térkép',
+      controls_t5: '⤒ ugrás · 🐾 lopakodás be/ki · E cselekvés · ❚❚ szünet · ▦ térkép',
       controls_t6: 'Tipp: lépj a zene ütemére – úgy halkabb vagy.',
       pause_title: 'Szünet',
       pause_resume: 'Folytatás',
@@ -61,11 +61,13 @@
       press_any: 'Nyomj meg egy gombot',
       hint_hide: '↓ / E – elbújás',
       hint_unhide: 'Mozdulj, ha előbújnál',
-      hint_sneak: 'Tartsd a Shiftet: osonás',
+      hint_sneak: 'Tartsd a Shiftet: lopakodás',
+      hint_sneak_t: '🐾 gomb: lopakodás be/ki',
       hint_beat: 'Lépj a zene ütemére – úgy halkabb vagy!',
       hint_creak: 'Nyikorgó padló – ugord át!',
-      hint_chandelier: 'Csillár! Húzd le a fejed – osonj át alatta (Shift)!',
-      hint_sleeper: 'Alvó a közelben – csak osonva!',
+      hint_chandelier: 'Csillár! Húzd le a fejed – lopakodj át alatta (Shift)!',
+      hint_chandelier_t: 'Csillár! Húzd le a fejed – lopakodj át alatta (🐾)!',
+      hint_sleeper: 'Alvó a közelben – csak lopakodva!',
       hint_exit: 'Lépcső lefelé',
       hint_ghost: 'Szellem! Bújj el, vagy állj meg teljesen mozdulatlanul.',
       lvl_floor1: '1. szint – A hálószobák',
@@ -101,7 +103,7 @@
       ivy_caught_8: 'Legközelebb óvatosabb leszek. Legalábbis a fejemben.',
       hint_torch: 'E / ↓ – fáklya meggyújtása',
       hint_candle: 'E / ↓ – gyertya meggyújtása',
-      hint_web: 'Pókháló! Osonva átmehetsz rajta – ha rohansz, tönkremegy és zajt csap.',
+      hint_web: 'Pókháló! Lopakodva átmehetsz rajta – ha rohansz, tönkremegy és zajt csap.',
       hint_skeleton: 'Táncoló csontvázak! Várd ki a lépést, vagy ugord át őket.',
       lvl_crypt1: '5. szint – A kazamata',
       lvl_crypt2: '6. szint – A tekercs kamrája',
@@ -203,9 +205,11 @@
       hint_hide: '↓ / E – hide',
       hint_unhide: 'Move if you want to come out',
       hint_sneak: 'Hold Shift: sneak',
+      hint_sneak_t: '🐾 button: sneak on/off',
       hint_beat: 'Step to the beat. That is quieter!',
       hint_creak: 'Creaky boards – jump over them!',
       hint_chandelier: 'Chandelier! Duck your head – sneak under it (Shift)!',
+      hint_chandelier_t: 'Chandelier! Duck your head – sneak under it (🐾)!',
       hint_sleeper: 'Someone is asleep – sneak only!',
       hint_exit: 'Stairs down',
       hint_ghost: 'A ghost! Hide, or stand perfectly still.',
@@ -303,7 +307,7 @@
   // '{name}' placeholders are replaced from vars.
   G.t = function (key, vars) {
     const cur = G.STRINGS[G.i18n.lang] || {};
-    let s = cur[key];
+    let s = (G.touchMode && cur[key + '_t'] !== undefined) ? cur[key + '_t'] : cur[key]; // touch-screen wording when there is one
     if (s === undefined) {
       const other = G.STRINGS[G.i18n.lang === 'hu' ? 'en' : 'hu'] || {};
       s = other[key];
