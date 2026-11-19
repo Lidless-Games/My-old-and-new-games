@@ -220,8 +220,11 @@
         const k = i / n;
         if (this.world.isSolid(this.world.toTile(ex + (p.x - ex) * k), this.world.toTile(ey + (cy - ey) * k))) return;
       }
+      if (!tw.greeted) { tw.greeted = true; tw.cd = Math.max(tw.cd, 2.4); G.events.emit('twins_greet', { x: tw.x, y: tw.y }); return; }
       if (tw.cd > 0) return;
       tw.cd = TW_COOLDOWN; tw.throwK = 1;
+      tw.shout = ((tw.shout || 0) % 2) + 1;
+      G.events.emit('twins_throw', { x: tw.x, y: tw.y, n: tw.shout });
       // ballistic arc to her current position
       const sx = tw.x + tw.facing * 14, sy = tw.y - 46, tx = p.x, ty = p.y - 25;
       const flight = clamp(Math.hypot(tx - sx, ty - sy) / 330, 0.45, 1.1);

@@ -109,6 +109,8 @@
       G.events.on('locked', (d) => { const p = this.player; if (!this.bubbles.length) { this.say(p.x, p.y - 56, t('ivy_locked_' + d.color), 'ivy', 3.5); this.bubbles[0].follow = true; } });
       G.events.on('tattle_run', (d) => { this.say(d.x, d.y - 60, t('tattle_run'), 'npc', 2.4); });
       G.events.on('janitor_enter', (d) => { this.say(d.x, d.y - 70, t('janitor_enter'), 'npc', 2.6); });
+      G.events.on('twins_greet', (d) => { this.say(d.x, d.y - 70, t('twins_greet'), 'npc', 2.6); });
+      G.events.on('twins_throw', (d) => { this.say(d.x, d.y - 70, t('twins_throw_' + d.n), 'npc', 1.6); });
       G.events.on('bribed', (d) => { this.say(d.x, d.y - 50, t('tattle_bribed'), 'npc', 3); });
       G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
       G.events.on('ghost_summoned', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_wrong_candles'), 'ivy', 3); this.bubbles[0].follow = true; });
@@ -645,6 +647,7 @@
       if (this.school && this.school.nearestAction) { const k = this.school.nearestAction(); if (k) return t(k); }
       if (this.npcs && this.npcs.nearestAction) { const k = this.npcs.nearestAction(); if (k) return t(k); }
       if (this.npcs && this.npcs.tattles && this.npcs.tattles.some((ta) => ta.state !== 'eat' && Math.abs(ta.x - p.x) < 7 * T && Math.abs(ta.y - p.y) < 2 * T)) return t('hint_tattle');
+      if (this.npcs && this.npcs.twins && this.npcs.twins.some((tw) => Math.abs(tw.x - p.x) < 8 * T && Math.abs(tw.y - p.y) < 2 * T)) return t('hint_twins');
       if (this.npcs && this.npcs.janitors && this.npcs.janitors.some((j) => Math.abs(j.x - p.x) < 9 * T && Math.abs(j.y - p.y) < 2 * T)) return t('hint_janitor');
       if (this.dungeon && this.dungeon.nearestAction) { const k = this.dungeon.nearestAction(); if (k) return t(k); }
       if (this.dungeon) {
