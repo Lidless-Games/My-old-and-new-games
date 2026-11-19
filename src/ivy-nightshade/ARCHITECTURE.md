@@ -218,3 +218,63 @@ oldest summoned (else oldest) ghost vanishes, so at most 3 at once. `G.Ghosts` m
   `drawWeb(ctx,x,y,{len, torn, t})` (x,y = left end on floor), `drawTorch(ctx,x,y,{lit,t})`, `drawPuzzleCandle(ctx,x,y,{lit,t,puff})`,
   `drawDoor(ctx,x,y,{open:0..1,t})` (x,y bottom-centre), `drawScroll(ctx,x,y,{t, glow})`, `drawVortex(ctx,x,y,{k,t})` (teleport swirl, k 0..1).
 - `src/levels.js` levels 5–6 + i18n strings (wave 2, levels agent). `src/game.js` (lead): integration, light strength, ending scene.
+
+# M3 addendum – the boarding school (level 7, theme 'school')
+Flow: crypt2's scroll → teleport → the school level (G.LEVELS index 6, id 'school'), a random start among `start` points.
+The crow family's nest is at a random `nest` point (chosen once per playthrough, kept after a catch). Finale at the nest.
+
+## Map: one big, non-linear building
+The grid holds all rooms laid out spatially, separated by walls. Rooms are connected by **portal doors** (Ivy presses ↓ or E
+while overlapping a door → short fade → appears at the paired door). Walking past a door does nothing. Hub: the 'aula'
+(two-storey gallery) with doors to 3 classrooms (chemistry, music, biology), the dining hall and the library; stairs up to the
+bell tower, down to the cellar. Some rooms also connect to each other (non-linear).
+```js
+{type:'room', id:'aula', nameKey:'room_aula', tx, ty, w, h, theme:'aula'|'classroom'|'dining'|'library'|'cellar'|'tower'}
+{type:'portal', id:'p1', to:'p2', tx, ty, lock: null|'red'|'blue'|'green', style:'door'|'arch'|'stairs_up'|'stairs_down'|'trapdoor'}
+{type:'key', tx, ty, color:'red'|'blue'|'green'}     {type:'candy', tx, ty}
+{type:'start', tx, ty}        // possible teleport arrival points (random pick)
+{type:'nest', tx, ty}         // possible nest spots (one is chosen)
+{type:'feather', tx, ty, nest: <index of nest entity in level order>}   // only the chosen nest's feathers are shown
+{type:'janitor', tx, ty, from, to, speed}   {type:'twins', tx, ty, from, to}   {type:'tattle', tx, ty, from, to}   {type:'cat', tx, ty}
+{type:'vase', tx, ty}         // something the cat can knock over
+```
+Existing types still work in the school: hide, deco, creak (`~` tiles), ghosts are NOT used here.
+
+## Inventory & catching (school rules)
+- `G.inv = {keys:{red,blue,green}, candy: n}` (reset when the school level starts). Picking up: touch the item.
+- Locked portal: usable only with the matching key (key is kept); a locked door shows a padlock in its colour; unlocked ones stay open.
+- Caught by the janitor (or his flashlight) → `'caught' {by:'janitor'}` → special sequence (lead, game.js): Ivy "wakes up at home",
+  the scroll brings her back to a NEW random start; ALL doors lock again; the keys she carried + candy are dropped as a **bag**
+  at the last hiding spot she used (stealth checkpoint; if none, at the previous start point), AND the keys also reappear at
+  their original spots. Touching the bag gives everything back. School.js provides `dropBag(x,y)` / `resetForCatch()`.
+- Other NPCs never catch Ivy themselves; they make NOISE that brings the janitor.
+
+## Modules (M3)
+- `src/school.js` (school agent) → `G.School(world, player, level)`: rooms (current room by Ivy's centre, `visited` set),
+  portals (`update` handles ↓/E entry: returns/sets `this.transit = {from, to, t}` and the game fades; it calls
+  `player.setPos` at the midpoint), locks, items, bag, nest choice (`this.nest`), feathers (only chosen), crow caws every
+  4–7 s with volume by distance (`G.sfx.play('crow',{vol})`), `nestReached` flag, `nearestAction()` → 'hint_door' |
+  'hint_locked_<color>' | 'hint_candy_give' | null, `minimap()` → {rooms:[{id,x,y,w,h,visited,current}], portals:[{x,y,locked,color}]}
+  in tile units, `draw(ctx)` world space (portals, items, bag, feathers, nest via G.art), `paused`, `resetForCatch(checkpoint)`,
+  `chooseStart()` → {x,y} px. School creaky tiles emit `'noise' {x, y, radius: 6*TILE, src:'creak'}` when Ivy lands/steps on them.
+- `src/npcs.js` (npc agent) → `G.Npcs(world, player, level, school)`: janitor(s) (patrol from..to, flashlight cone 6 tiles ±25°
+  with LOS; sees Ivy if not hidden — standing still does NOT help against him; hears `'noise'` events within their radius and
+  walks to investigate (stays on his floor segment, max 5 s look-around, then returns); also hears Ivy WALKING (not sneaking)
+  within 3 tiles; catching = seeing her for 0.4 s → emit `'caught' {by:'janitor', who:'janitor', x, y}`), twins (stand on their
+  spot, throw a water balloon in an arc at Ivy when she is within 7 tiles in front; splash → `'noise'` radius 10 tiles,
+  `src:'splash'`; a hit just splashes her (comic), no catch), tattle (patrols; sees Ivy in a 5-tile cone → runs to the nearest
+  janitor; on arrival the janitor investigates Ivy's position at that moment; if Ivy has candy and presses E next to him →
+  candy--, he sits down eating, harmless for the rest of the run, `'bribed'` event), cat (wanders slowly; Ivy walking within
+  2.5 tiles startles it: jumps, knocks the nearest vase within 4 tiles → `'noise'` radius 10 tiles, `src:'crash'`, vase broken).
+  `update(dt)`, `draw(ctx)`, `paused`, `reset()` (all back to start, bribed tattle stays bribed), `nearestAction()` → 'hint_candy_give'|null.
+- Art (art agent): theme 'school' backgrounds/tiles with per-room look via `G.art.drawBackground(ctx, cam, 'school_' + roomTheme, t)`
+  and `drawTiles(... 'school')`; deco: desk, blackboard, lockers, bookshelf_tall, rolling_ladder (deco only), piano, skeleton_model
+  (biology), flasks_shelf (chemistry), long_table, benches, boiler, pipes, bell, clock, trophy_case, vase; and
+  `drawPortal(ctx,x,y,{style,lock,color,t,open})` (x,y bottom-centre), `drawKey(ctx,x,y,{color,t})`, `drawCandy(ctx,x,y,{t})`,
+  `drawBag(ctx,x,y,{t})`, `drawFeather(ctx,x,y,{t})`, `drawNest(ctx,x,y,{t, family:true})` (crow + mate + three-headed chick),
+  `drawJanitor(ctx,x,y,{facing,t,state,alert})` + `drawFlashlight(ctx,x,y,{facing,len,ang,t})`, `drawTwins(ctx,x,y,{t,throwK})`,
+  `drawBalloon(ctx,x,y,{t,splash})`, `drawTattle(ctx,x,y,{facing,t,state})` (state 'walk'|'run'|'eat'), `drawCat(ctx,x,y,{facing,t,state})`
+  ('walk'|'sit'|'startle'), `drawVase(ctx,x,y,{broken})`, `drawIvy` new state 'front' (Ivy facing the camera, deadpan).
+- `src/levels.js` school level + i18n strings (levels agent, wave 2). `src/game.js` (lead): portal fades, minimap HUD,
+  inventory HUD, janitor catch "home" sequence, finale, end scene.
+Build order: … ghosts.js, dungeon.js, school.js, npcs.js, levels.js …

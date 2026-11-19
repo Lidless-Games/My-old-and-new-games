@@ -222,5 +222,143 @@
     });
   }
 
-  G.LEVELS = [floor1(), floor2(), floor3(), floor4(), crypt1(), crypt2()];
+  // ================================================================ 7. The boarding school (one big building, portal doors)
+  // Layout (tiles). Three bands: top floor row 13, middle floor row 30, bottom floor row 43.
+  //   top:    MUSIC (x1-26)    TOWER (x33-52)   CHEMISTRY (x59-84)
+  //   middle: LIBRARY (x1-26)  AULA (x29-56)    BIOLOGY (x59-84)
+  //   bottom: DINING (x1-26)   CELLAR (x29-56)  (solid)
+  function school() {
+    const W = 86, H = 45;
+    const L = make(W, H, 43, 34);
+    L.rect(0, W - 1, 0, H - 1, '#');
+    // carve a room: interior rows top..F-1, wooden floor row F; returns local helpers (ground = row F-1)
+    function room(id, x1, x2, top, F, theme) {
+      L.rect(x1, x2, top, F - 1, ' '); L.row(x1, x2, F, '=');
+      L.ents.push({ type: 'room', id, nameKey: 'room_' + id, tx: x1, ty: top, w: x2 - x1 + 1, h: F - top + 1, theme });
+      const r = {
+        F,
+        hide(tx, kind, up) { L.ents.push({ type: 'hide', tx, ty: F - 1 - (up || 0), kind }); return r; },
+        deco(tx, kind, up) { L.deco(tx, kind, F - 1 - (up || 0)); return r; },
+        wall(tx, kind, up) { L.deco(tx, kind, F - up); return r; },
+        shelf(a, b, row) { L.shelf(a, b, row); return r; },
+        ladder(x, y1, y2) { L.ladder(x, y1, y2); return r; },
+        creak(a, b) { L.row(a, b, F, '~'); return r; },
+        door(id, to, tx, style, lock, up) { L.ents.push({ type: 'portal', id, to, tx, ty: F - 1 - (up || 0), lock: lock || null, style: style || 'door' }); return r; },
+        put(type, tx, extra, up) { L.ents.push(Object.assign({ type, tx, ty: F - 1 - (up || 0) }, extra || {})); return r; },
+      };
+      return r;
+    }
+    const E = L.ents;
+
+    // ---- nests (order matters: feathers refer to these indices) ----
+    // 0 tower bell beam, 1 library top shelf, 2 aula chandelier, 3 chemistry cabinet, 4 music organ pipes
+    E.push({ type: 'nest', tx: 48, ty: 3 });
+    E.push({ type: 'nest', tx: 3, ty: 16 });
+    E.push({ type: 'nest', tx: 42, ty: 21 });
+    E.push({ type: 'nest', tx: 82, ty: 6 });
+    E.push({ type: 'nest', tx: 24, ty: 6 });
+
+    // ================= AULA (hub, two storeys) =================
+    const au = room('aula', 29, 56, 16, 30, 'aula');
+    au.shelf(29, 38, 24).ladder(39, 24, 29).shelf(47, 56, 24).ladder(46, 24, 29).shelf(41, 44, 22);
+    au.creak(36, 38).creak(48, 50);
+    au.door('p_au_lib', 'p_lib_au', 30, 'door')
+      .door('p_au_din', 'p_din_au', 33, 'door')
+      .door('p_au_cel', 'p_cel_au', 43, 'trapdoor', 'blue')
+      .door('p_au_tow', 'p_tow_au', 52, 'stairs_up', 'red')
+      .door('p_au_bio', 'p_bio_au', 55, 'door')
+      .door('p_au_mus', 'p_mus_au', 31, 'door', null, 6)
+      .door('p_au_che', 'p_che_au', 54, 'door', 'green', 6);
+    au.hide(36, 'armor').hide(49, 'armor').hide(35, 'curtain', 6).hide(51, 'curtain', 6);
+    au.wall(32, 'window', 8).wall(40, 'portrait', 6).wall(49, 'portrait', 6).wall(53, 'window', 8);
+    au.wall(34, 'banner', 3).wall(46, 'candelabra', 3).wall(41, 'trophy_case', 1);
+    au.deco(42, 'candelabra', 6).deco(53, 'candelabra', 6);
+    au.put('janitor', 34, { from: 32, to: 53, speed: 40 });
+    au.put('start', 33, null, 6);
+    // feathers to the chandelier ring (nest 2): from the stairs/doors up the ladder
+    E.push({ type: 'feather', tx: 41, ty: 29, nest: 2 }, { type: 'feather', tx: 39, ty: 26, nest: 2 },
+      { type: 'feather', tx: 36, ty: 23, nest: 2 }, { type: 'feather', tx: 42, ty: 21, nest: 2 });
+
+    // ================= LIBRARY (left, middle band) =================
+    const li = room('library', 1, 26, 15, 30, 'library');
+    li.shelf(4, 21, 21).ladder(22, 21, 29).shelf(7, 9, 19).shelf(3, 5, 17);
+    li.creak(13, 16);
+    li.door('p_lib_au', 'p_au_lib', 24, 'door').door('p_lib_mus', 'p_mus_lib', 3, 'stairs_up');
+    li.hide(8, 'curtain').hide(18, 'wardrobe');
+    li.deco(5, 'bookshelf_tall').deco(11, 'bookshelf_tall').deco(14, 'rolling_ladder').deco(21, 'bookshelf_tall');
+    li.wall(10, 'portrait', 6).wall(16, 'window', 6);
+    li.deco(9, 'bookshelf_tall', 9).deco(17, 'bookshelf_tall', 9).deco(6, 'candelabra', 9);
+    li.put('cat', 19).put('vase', 10).put('vase', 16).put('vase', 22);
+    li.put('start', 12);
+    li.put('key', 13, { color: 'green' }, 9);
+    E.push({ type: 'feather', tx: 20, ty: 29, nest: 1 }, { type: 'feather', tx: 22, ty: 26, nest: 1 },
+      { type: 'feather', tx: 16, ty: 20, nest: 1 }, { type: 'feather', tx: 8, ty: 18, nest: 1 }, { type: 'feather', tx: 4, ty: 16, nest: 1 });
+
+    // ================= MUSIC (top-left) =================
+    const mu = room('music', 1, 26, 3, 13, 'classroom');
+    mu.shelf(5, 8, 11).shelf(14, 16, 11).shelf(18, 20, 9).shelf(22, 25, 7);
+    mu.creak(9, 12).creak(21, 22);
+    mu.door('p_mus_lib', 'p_lib_mus', 3, 'stairs_down').door('p_mus_au', 'p_au_mus', 24, 'door');
+    mu.hide(10, 'curtain').hide(16, 'wardrobe', 0);
+    mu.deco(7, 'piano').deco(13, 'benches').deco(19, 'benches');
+    mu.wall(3, 'window', 5).wall(12, 'blackboard', 1).wall(22, 'pipes', 3).wall(25, 'pipes', 3);
+    mu.put('key', 6, { color: 'blue' }, 2).put('candy', 12).put('start', 20);
+    E.push({ type: 'feather', tx: 21, ty: 12, nest: 4 }, { type: 'feather', tx: 15, ty: 10, nest: 4 },
+      { type: 'feather', tx: 19, ty: 8, nest: 4 }, { type: 'feather', tx: 23, ty: 6, nest: 4 });
+
+    // ================= TOWER (top-centre) =================
+    const to = room('tower', 33, 52, 2, 13, 'tower');
+    to.ladder(34, 6, 12).shelf(35, 39, 6).shelf(41, 50, 4);
+    to.creak(47, 50);
+    to.door('p_tow_au', 'p_au_tow', 36, 'stairs_down', 'red');
+    to.hide(41, 'curtain').hide(45, 'armor');
+    to.wall(44, 'bell', 6).wall(38, 'window', 6).wall(50, 'window', 6).wall(40, 'clock', 7);
+    to.deco(48, 'candelabra', 0);
+    E.push({ type: 'feather', tx: 38, ty: 12, nest: 0 }, { type: 'feather', tx: 34, ty: 9, nest: 0 },
+      { type: 'feather', tx: 37, ty: 5, nest: 0 }, { type: 'feather', tx: 43, ty: 3, nest: 0 });
+
+    // ================= CHEMISTRY (top-right) =================
+    const ch = room('chemistry', 59, 84, 2, 13, 'classroom');
+    ch.shelf(73, 75, 11).shelf(77, 79, 9).shelf(81, 83, 7);
+    ch.creak(66, 68);
+    ch.door('p_che_au', 'p_au_che', 61, 'door', 'green');
+    ch.hide(65, 'wardrobe').hide(71, 'curtain');
+    ch.deco(63, 'labbench').deco(69, 'desk').deco(78, 'flasks_shelf');
+    ch.wall(67, 'flasks_shelf', 3).wall(61, 'blackboard', 2).wall(72, 'window', 6).wall(80, 'banner', 4);
+    E.push({ type: 'feather', tx: 63, ty: 12, nest: 3 }, { type: 'feather', tx: 74, ty: 10, nest: 3 },
+      { type: 'feather', tx: 78, ty: 8, nest: 3 }, { type: 'feather', tx: 82, ty: 6, nest: 3 });
+
+    // ================= BIOLOGY (middle-right) =================
+    const bi = room('biology', 59, 84, 19, 30, 'classroom');
+    bi.door('p_bio_au', 'p_au_bio', 60, 'door');
+    bi.hide(65, 'wardrobe').hide(78, 'curtain');
+    bi.deco(70, 'skeleton_model').deco(74, 'desk').deco(81, 'lockers').deco(63, 'desk');
+    bi.wall(68, 'blackboard', 2).wall(77, 'window', 6).wall(82, 'window', 6);
+    bi.put('candy', 72).put('tattle', 66, { from: 67, to: 77 }).put('start', 83);
+    // ================= DINING (bottom-left) =================
+    const di = room('dining', 1, 26, 34, 43, 'dining');
+    di.shelf(5, 8, 41);
+    di.door('p_din_au', 'p_au_din', 3, 'door').door('p_din_cel', 'p_cel_din', 24, 'arch');
+    di.hide(7, 'curtain', 0).hide(20, 'armor');
+    di.deco(13, 'long_table').deco(10, 'benches').deco(16, 'benches');
+    di.wall(10, 'window', 5).wall(15, 'banner', 3).wall(22, 'portrait', 5).wall(4, 'candelabra', 4);
+    di.put('twins', 11, { from: 11, to: 12 }).put('candy', 6, null, 2).put('candy', 22).put('start', 6);
+
+    // ================= CELLAR (bottom-centre) =================
+    const ce = room('cellar', 29, 56, 34, 43, 'cellar');
+    ce.shelf(46, 48, 41).shelf(50, 54, 39);
+    ce.creak(38, 40);
+    ce.door('p_cel_din', 'p_din_cel', 31, 'arch').door('p_cel_au', 'p_au_cel', 43, 'stairs_up', 'blue');
+    ce.hide(36, 'armor').hide(51, 'curtain');
+    ce.deco(34, 'boiler').deco(40, 'pipes').deco(47, 'boiler');
+    ce.wall(38, 'pipes', 4).wall(45, 'pipes', 4).wall(55, 'pipes', 4);
+    ce.put('janitor', 40, { from: 33, to: 46, speed: 40 }).put('key', 52, { color: 'red' }, 4).put('start', 54);
+
+    return finish(L, {
+      id: 'school', nameKey: 'lvl_school', theme: 'school', introKey: 'intro_school',
+      start: { tx: 50, ty: 29 }, exit: { tx: W + 8, ty: 29 }, // unreachable: the level ends at the nest
+    });
+  }
+
+  G.LEVELS = [floor1(), floor2(), floor3(), floor4(), crypt1(), crypt2(), school()];
 })();

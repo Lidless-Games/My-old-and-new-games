@@ -45,7 +45,7 @@
 
   // ---------------- End of M1 ----------------
   class EndScene {
-    constructor() { this.tt = 0; }
+    constructor(final) { this.tt = 0; this.final = !!final; }
     enter() { sfx('win'); }
     update(dt) {
       this.tt += dt;
@@ -55,14 +55,17 @@
       // after the scroll: Ivy floats in the teleport vortex, on her way to the boarding school
       ctx.fillStyle = CFG.PAL.plumDeep; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H);
       const cx = CFG.VIEW_W / 2, cy = 330;
-      if (G.art) {
+      if (G.art && this.final && G.art.drawNest) { // the end: the crow family in their nest, Ivy looking at us
+        ctx.save(); ctx.translate(cx + 150, cy + 10); ctx.scale(2.2, 2.2); G.art.drawNest(ctx, 0, 0, { t: G.time, family: true }); ctx.restore();
+        ctx.save(); ctx.translate(cx - 150, cy + 140); ctx.scale(2, 2); G.art.drawIvy(ctx, 0, 0, { state: 'front', facing: 1, t: G.time, speed: 0 }); ctx.restore();
+      } else if (G.art) {
         if (G.art.drawVortex) G.art.drawVortex(ctx, cx, cy, { k: 1, t: G.time });
         G.art.drawIvy(ctx, cx, cy + 25 + Math.sin(G.time * 2) * 6, { state: 'fall', facing: 1, t: G.time, speed: 0 });
         G.art.drawCrow(ctx, cx + 300, 250 + Math.sin(G.time * 1.6) * 10, { t: G.time, heads: 2, scale: 1.1, flap: 1 });
       }
       const a = U.clamp(this.tt / 1.5, 0, 1);
-      screenText(ctx, [t('m2_end_1')], 120, 22, a);
-      screenText(ctx, [t('m2_end_2')], 175, 30, U.clamp((this.tt - 1.5) / 1.2, 0, 1));
+      screenText(ctx, [t(this.final ? 'end_final_1' : 'm2_end_1')], 120, 22, a);
+      screenText(ctx, [t(this.final ? 'end_final_2' : 'm2_end_2')], 175, 30, U.clamp((this.tt - 1.5) / 1.2, 0, 1));
       if (this.tt > 2.5) screenText(ctx, [t('m1_end_3')], 515, 14, 0.5 + 0.3 * Math.sin(G.time * 3));
     }
   }
@@ -83,6 +86,11 @@
       this.dungeon = G.Dungeon && hasDungeon ? new G.Dungeon(this.world, this.player, L, this.ghosts) : null;
       if (this.dungeon) this.player.speedMul = () => (this.dungeon.speedMul ? this.dungeon.speedMul() : 1);
       this.hasScroll = (L.entities || []).some((e) => e.type === 'scroll');
+      this.isSchool = (L.entities || []).some((e) => e.type === 'room');
+      if (this.isSchool) G.school_nestIndex = undefined; // a fresh visit: the crow picks a nest anew
+      this.school = G.School && this.isSchool ? new G.School(this.world, this.player, L) : null;
+      this.npcs = G.Npcs && this.isSchool ? new G.Npcs(this.world, this.player, L, this.school) : null;
+      if (this.school && this.school.chooseStart) { const st = this.school.chooseStart(); this.player.setPos(st.x, st.y); this.stealth.checkpoint = { x: st.x, y: st.y }; }
       this.deco = (L.entities || []).filter((e) => e.type === 'deco').map((e) => {
         const p = this.world.entPos(e);
         if (e.kind === 'cobweb') { p.x = e.tx * T; p.y = e.ty * T; }
@@ -110,6 +118,7 @@
     // -> spider climbs away while Ivy gets up, bored -> one deadpan line, play resumes.
     beginCaught(d) {
       if (this.mode !== 'play') return;
+      if (d.by === 'janitor') return this.beginHome(d);
       this.caughtCount = (this.caughtCount || 0) + 1;
       this.mode = 'caught'; this.tt = 0;
       this.stealth.paused = true; this.traps.paused = d.by !== 'trap'; if (this.ghosts) this.ghosts.paused = true; if (this.dungeon) this.dungeon.paused = true;
@@ -277,6 +286,83 @@
       return { x: U.lerp(a.x, b.x, k), y: U.lerp(a.y, b.y, k), st: b.st, dir };
     }
 
+    drawMinimap(ctx) { // visited rooms only, top-right
+      const m = this.school.minimap ? this.school.minimap() : null; if (!m || !m.rooms.length) return;
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (const r of m.rooms) { x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y); x1 = Math.max(x1, r.x + r.w); y1 = Math.max(y1, r.y + r.h); }
+      const BW = 190, BH = 110, sc = Math.min(BW / (x1 - x0), BH / (y1 - y0)), ox = CFG.VIEW_W - BW - 16, oy = 14;
+      ctx.save();
+      ctx.fillStyle = 'rgba(20,16,26,0.55)'; ctx.fillRect(ox - 6, oy - 6, BW + 12, BH + 12);
+      for (const r of m.rooms) {
+        if (!r.visited) continue;
+        ctx.fillStyle = r.current ? 'rgba(243,160,58,0.55)' : 'rgba(201,207,224,0.28)';
+        ctx.fillRect(ox + (r.x - x0) * sc, oy + (r.y - y0) * sc, Math.max(2, r.w * sc - 1), Math.max(2, r.h * sc - 1));
+      }
+      for (const d of m.portals || []) {
+        if (d.visible === false) continue;
+        if (!m.rooms.some((r) => r.visited && d.x >= r.x && d.x <= r.x + r.w && d.y >= r.y && d.y <= r.y + r.h)) continue; // only doors of explored rooms
+        ctx.fillStyle = d.locked ? ({ red: '#d0485a', blue: '#5a8ad8', green: '#6cbf5a' }[d.color] || '#d0485a') : '#efe6d0';
+        ctx.fillRect(ox + (d.x - x0) * sc - 1.5, oy + (d.y - y0) * sc - 1.5, 3, 3);
+      }
+      const p = this.player, T_ = CFG.TILE;
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ox + (p.x / T_ - x0) * sc, oy + (p.y / T_ - 0.7 - y0) * sc, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    drawInventory(ctx) { // keys + candy under the room name, top-left
+      const inv = G.inv || { keys: {}, candy: 0 }; let x = 22; const y = 52;
+      for (const c of ['red', 'blue', 'green']) if (inv.keys && inv.keys[c] && G.art.drawKey) { ctx.save(); ctx.translate(x, y); ctx.scale(0.8, 0.8); G.art.drawKey(ctx, 0, 0, { color: c, t: G.time }); ctx.restore(); x += 30; }
+      if (inv.candy > 0 && G.art.drawCandy) {
+        ctx.save(); ctx.translate(x + 4, y); ctx.scale(0.8, 0.8); G.art.drawCandy(ctx, 0, 0, { t: G.time }); ctx.restore();
+        ctx.fillStyle = CFG.PAL.cream; ctx.font = '14px Georgia, serif'; ctx.fillText('×' + inv.candy, x + 18, y + 2);
+      }
+    }
+
+    // caught by the school janitor: Ivy "wakes up at home", the scroll brings her back to a new random start;
+    // doors lock again, her keys/candy wait in a bag at the last hiding spot, the keys also reappear at their spots
+    beginHome(d) {
+      this.caughtCount = (this.caughtCount || 0) + 1;
+      this.mode = 'home'; this.tt = 0; this.player.control = false;
+      if (this.npcs) this.npcs.paused = true; if (this.school) this.school.paused = true;
+      sfx('caught'); this.say(d.x, d.y - 70, t('caught_janitor'), 'npc', 2.2);
+      this.homeDone = false;
+    }
+    updateHome(dt) {
+      const tt = this.tt, p = this.player;
+      p.state = 'frozen';
+      if (tt > 2.6 && !this.homeDone) { // while the screen is dark: rebuild the school state
+        this.homeDone = true;
+        if (this.school) { this.school.resetForCatch(this.stealth.checkpoint); if (this.school.moveNest) this.school.moveNest(); }
+        if (this.npcs && this.npcs.reset) this.npcs.reset();
+        const st = this.school && this.school.chooseStart ? this.school.chooseStart() : this.stealth.checkpoint;
+        p.setPos(st.x, st.y); this.stealth.checkpoint = { x: st.x, y: st.y }; this.trail = [{ x: st.x, y: st.y, st: 'idle' }];
+        this.bubbles = [];
+      }
+      if (tt > 3.2 && tt < 3.3 && !this._homeSaid) { this._homeSaid = true; }
+      if (tt > 6.2) {
+        this._homeSaid = false;
+        if (this.npcs) this.npcs.paused = false; if (this.school) this.school.paused = false;
+        p.state = 'idle'; p.control = true; p.vx = 0; G.input.reset();
+        this.mode = 'play';
+        this.say(p.x, p.y - 56, t('ivy_back_school'), 'ivy', 5.5); this.bubbles[0].follow = true;
+      }
+    }
+    drawHomeOverlay(ctx) { // fade to black → Ivy in her bedroom with the scroll → vortex → back
+      const tt = this.tt, W = CFG.VIEW_W, H = CFG.VIEW_H;
+      const a = tt < 1.6 ? 0 : tt < 2.2 ? (tt - 1.6) / 0.6 : tt < 5.6 ? 1 : Math.max(0, 1 - (tt - 5.6) / 0.6);
+      if (a <= 0) return;
+      ctx.save(); ctx.globalAlpha = a;
+      if (tt >= 2.2 && tt < 5.6) {
+        G.art.drawBackground(ctx, { x: 0, y: 0 }, 'bedroom', G.time);
+        ctx.fillStyle = CFG.PAL.woodDark; ctx.fillRect(0, 430, W, H - 430);
+        G.art.drawDeco(ctx, 300, 430, { kind: 'bed_ivy', t: G.time });
+        const k = U.clamp((tt - 2.4) / 1.4, 0, 1);
+        G.art.drawIvy(ctx, 470, 430, { state: k < 1 ? 'getup' : 'idle', k, facing: 1, t: G.time, speed: 0 });
+        if (tt > 3.6) G.art.drawBubble(ctx, 470, 372, t('ivy_home_wake'), { who: 'ivy' });
+        if (tt > 4.6 && G.art.drawVortex) G.art.drawVortex(ctx, 470, 400, { k: U.clamp((tt - 4.6) / 1, 0, 1), t: G.time });
+      } else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
+      ctx.restore();
+    }
+
     drawCreakMarks(ctx, cam) { // make creaky boards readable: lighter warped planks + little creak lines
       const w = this.world;
       if (!this._creaks) {
@@ -404,6 +490,11 @@
         this.stealth.update(dt);
         this.traps.update(dt);
         if (this.ghosts) this.ghosts.update(dt);
+        if (this.school) {
+          this.school.update(dt);
+          if (this.school.nestReached && this.mode === 'play') { this.mode = 'finale'; this.tt = 0; p.control = false; sfx('crow'); }
+        }
+        if (this.npcs) this.npcs.update(dt);
         if (this.dungeon) {
           this.dungeon.update(dt);
           if (this.dungeon.scrollReached && this.mode === 'play') { this.mode = 'scroll'; this.tt = 0; p.control = false; sfx('win'); }
@@ -420,9 +511,15 @@
         if (this.tt > 0.2 && !this._scrollSaid) { this._scrollSaid = true; this.say(p.x, p.y - 56, t('scroll_read'), 'ivy', 2.6); this.bubbles[0].follow = true; }
         if (this.tt > 2.6 && !this._whoosh) { this._whoosh = true; sfx('whoosh'); }
         if (this.tt > 5.2) {
-          G.save.set('progress', Math.max(G.save.get('progress', 0), this.index));
-          G.scenes.set(new EndScene());
+          G.save.set('progress', Math.max(G.save.get('progress', 0), Math.min(this.index + 1, G.LEVELS.length - 1)));
+          G.game.nextLevel(this.index); // → the boarding school (or the end scene if it doesn't exist yet)
         }
+      } else if (this.mode === 'home') {
+        this.updateHome(dt);
+      } else if (this.mode === 'finale') { // the crow family in the nest; Ivy turns to the camera
+        if (this.tt < 1.2) p.update(dt); else p.state = 'front';
+        if (this.tt > 1.6 && !this._finSaid) { this._finSaid = true; this.say(p.x, p.y - 58, t('ending_line'), 'ivy', 4.5); this.bubbles[0].follow = true; }
+        if (this.tt > 7) G.scenes.set(new EndScene(true));
       } else if (this.mode === 'done') {
         p.update(dt);
         if (this.tt > 2.0) G.game.nextLevel(this.index);
@@ -448,6 +545,9 @@
       if (G.save.get('hints', true) === false) return ''; // hints switched off in the menu
       if (p.state === 'hidden') return t('hint_unhide');
       if (this.stealth.nearestHide()) return t('hint_hide');
+      if (this.school && this.school.nearestAction) { const k = this.school.nearestAction(); if (k) return t(k); }
+      if (this.npcs && this.npcs.nearestAction) { const k = this.npcs.nearestAction(); if (k) return t(k); }
+      if (this.npcs && this.npcs.janitors && this.npcs.janitors.some((j) => Math.abs(j.x - p.x) < 9 * T && Math.abs(j.y - p.y) < 2 * T)) return t('hint_janitor');
       if (this.dungeon && this.dungeon.nearestAction) { const k = this.dungeon.nearestAction(); if (k) return t(k); }
       if (this.dungeon) {
         const D = this.dungeon;
@@ -468,7 +568,8 @@
     draw(ctx) {
       const cam = { x: Math.round(G.camera.x), y: Math.round(G.camera.y) };
       const theme = this.level.theme;
-      G.art.drawBackground(ctx, cam, theme, G.time);
+      const room = this.school ? (this.school.currentRoom || this.school.room || null) : null;
+      G.art.drawBackground(ctx, cam, room && room.theme ? 'school_' + room.theme : theme, G.time);
       ctx.save();
       ctx.translate(-cam.x, -cam.y);
       G.art.drawTiles(ctx, this.world, cam, theme);
@@ -481,16 +582,19 @@
       this.traps.draw(ctx);
       this.stealth.draw(ctx);
       if (this.dungeon) this.dungeon.draw(ctx);
+      if (this.school) this.school.draw(ctx);
+      if (this.npcs) this.npcs.draw(ctx);
       if (this.ghosts) this.ghosts.draw(ctx);
       if (!(this.mode === 'caught' && this.drawCaught(ctx)) && this.player.state !== 'hidden') this.player.draw(ctx);
       ctx.restore();
       const p = this.player;
-      let strength = { bedroom: 0.72, greenhouse: 0.6, lab: 0.68, hall: 0.7, crypt: 0.76 }[theme] ?? 0.7;
+      let strength = { bedroom: 0.72, greenhouse: 0.6, lab: 0.68, hall: 0.7, crypt: 0.76, school: 0.7 }[theme] ?? 0.7;
+      if (room && room.theme === 'cellar') strength = 0.86;
       if (this.dungeon && this.dungeon.lightStrength) strength = this.dungeon.lightStrength(strength);
       G.art.drawLight(ctx, p.x - cam.x, p.y - 40 - cam.y, G.time, p.state === 'hidden' ? strength + 0.1 : strength);
       // bubbles above the light
       ctx.save(); ctx.translate(-cam.x, -cam.y);
-      this.bubbles.forEach((b) => G.art.drawBubble(ctx, b.x, b.y, b.text, { who: b.who }));
+      this.bubbles.forEach((b) => G.art.drawBubble(ctx, U.clamp(b.x, cam.x + 160, cam.x + CFG.VIEW_W - 160), U.clamp(b.y, cam.y + 110, cam.y + CFG.VIEW_H), b.text, { who: b.who }));
       ctx.restore();
       if (this.mode === 'scroll' && G.art.drawVortex) {
         const k = U.clamp((this.tt - 1.2) / 3, 0, 1);
@@ -498,7 +602,10 @@
         const wf = U.clamp((this.tt - 3.8) / 1.2, 0, 1);
         if (wf > 0) { ctx.fillStyle = 'rgba(245,238,225,' + wf.toFixed(2) + ')'; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H); }
       }
-      G.ui.drawHUD(ctx, { alert: this.stealth.maxAlert(), hint: this.hint(), levelName: t(this.level.nameKey) });
+      G.ui.drawHUD(ctx, { alert: this.stealth.maxAlert(), hint: this.hint(), levelName: room && room.nameKey ? t(room.nameKey) : t(this.level.nameKey) });
+      if (this.school) { this.drawMinimap(ctx); this.drawInventory(ctx); }
+      if (this.school && this.school.transitK) { const k = this.school.transitK(); if (k > 0) { ctx.fillStyle = 'rgba(0,0,0,' + k.toFixed(2) + ')'; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H); } }
+      if (this.mode === 'home') this.drawHomeOverlay(ctx);
       if (this.toast) screenText(ctx, [this.toast.text], 90, 18, U.clamp(this.toast.tt * 2, 0, 1));
       const cardEnd = this.playStart == null ? 99 : this.playStart + 0.4; // the title card fades once play starts
       if ((this.mode === 'intro' || this.mode === 'play') && this.levelT < cardEnd) {
