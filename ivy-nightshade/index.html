@@ -8203,7 +8203,7 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     if (!play && st.id !== null) { st.id = null; stick.style.display = 'none'; setStick(0, 0); }
     if (!play && wasPlay) ['left', 'right', 'up', 'down', 'sneak', 'jump', 'action', 'pause', 'back', 'map'].forEach((a) => { V()[a] = false; });
     wasPlay = !!play;
-    if (play && st.id === null) V().sneak = sneakOn;
+    if (play) V().sneak = sneakOn; // always follows the toggle, also while the joystick is held still
     if (G.touchFlip !== G.save.get('lefty', false)) { G.touchFlip = G.save.get('lefty', false); layout(); }
     requestAnimationFrame(tick);
   }
@@ -8227,7 +8227,7 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     knob = document.createElement('div'); knob.className = 'knob'; stick.appendChild(knob);
     { // sneak is a toggle: tap on, tap off (the joystick's small push sneaks too)
       const b = document.createElement('div'); b.className = 'b sneak'; b.innerHTML = ICON_IVY; root.appendChild(b); btns.sneak = b;
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); sneakOn = !sneakOn; b.classList.toggle('down', sneakOn); b.innerHTML = sneakOn ? ICON_HOOD : ICON_IVY; });
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); sneakOn = !sneakOn; V().sneak = sneakOn; b.classList.toggle('down', sneakOn); b.innerHTML = sneakOn ? ICON_HOOD : ICON_IVY; });
     }
     { // swap sides
       const b = document.createElement('div'); b.className = 'b small'; b.innerHTML = ICON_SWAP; root.appendChild(b); btns.swap = b;
