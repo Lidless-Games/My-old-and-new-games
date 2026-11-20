@@ -57,7 +57,7 @@
   window.addEventListener('blur', resetKeys);
   document.addEventListener('visibilitychange', () => { if (document.hidden) resetKeys(); });
   window.addEventListener('pagehide', resetKeys);
-  ['pointerdown', 'touchstart'].forEach((ev) => window.addEventListener(ev, () => { anyPress = true; if (G.rhythm && G.rhythm.unlock) G.rhythm.unlock(); }, { passive: true }));
+  ['pointerdown', 'touchstart', 'touchend', 'pointerup'].forEach((ev) => window.addEventListener(ev, () => { anyPress = true; if (G.rhythm && G.rhythm.unlock) G.rhythm.unlock(); }, { passive: true }));
 
   const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'sneak', 'action', 'pause', 'confirm', 'back', 'map'];
   G.input = {
@@ -125,18 +125,33 @@
   G.startLoop = function () {
     let last = performance.now(), acc = 0;
     function frame(now) {
+      requestAnimationFrame(frame); // first, so one bad frame can never stop the game
       acc += Math.min(0.1, (now - last) / 1000); last = now;
-      while (acc >= G.dt) {
-        G.input._tick();
-        G.time += G.dt;
-        if (G.scenes.current) G.scenes.current.update(G.dt);
-        acc -= G.dt;
-      }
+      try {
+        while (acc >= G.dt) {
+          G.input._tick();
+          G.time += G.dt;
+          if (G.scenes.current) G.scenes.current.update(G.dt);
+          acc -= G.dt;
+        }
+      } catch (e) { acc = 0; report(e); }
       const ctx = G.ctx;
-      ctx.setTransform(G.scale, 0, 0, G.scale, 0, 0);
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H);
-      if (G.scenes.current) { ctx.save(); G.scenes.current.draw(ctx); ctx.restore(); }
-      requestAnimationFrame(frame);
+      try {
+        ctx.setTransform(G.scale, 0, 0, G.scale, 0, 0);
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CFG.VIEW_W, CFG.VIEW_H);
+        if (G.scenes.current) { ctx.save(); G.scenes.current.draw(ctx); ctx.restore(); }
+      } catch (e) { report(e); }
+      if (G.lastError && G.time - G.lastError.t < 12) { // small note in the corner, so a player can tell us what broke
+        ctx.setTransform(G.scale, 0, 0, G.scale, 0, 0);
+        ctx.font = '11px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,170,150,0.85)';
+        ctx.fillText('hiba: ' + G.lastError.msg.slice(0, 110), 8, CFG.VIEW_H - 8);
+      }
+    }
+    function report(e) {
+      const msg = String((e && (e.message || e)) || 'error') + (e && e.stack ? ' @' + (String(e.stack).split('\n')[1] || '').trim().slice(-60) : '');
+      if (!G.lastError || G.lastError.msg !== msg) console.error(e);
+      G.lastError = { msg, t: G.time };
+      try { if (G.ctx) G.ctx.restore(); } catch (x) {}
     }
     requestAnimationFrame(frame);
   };

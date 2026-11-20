@@ -4,6 +4,7 @@
   const G = window.G;
   const V = () => G.input.virtual;
   let sneakOn = false, wasPlay = false;
+  const ICON_IVY = '<svg viewBox="7 6 26 30" width="78%" height="78%"><path d="M9 20c0-8 5-13 11-13s11 5 11 13v12h-4V22H13v10H9z" fill="#15101c"/><ellipse cx="20" cy="22" rx="8" ry="9" fill="#efe6d8"/><path d="M12 19c1-6 4-8 8-8s7 2 8 8c-3-2-5-2-8-2s-5 0-8 2z" fill="#15101c"/><circle cx="16.8" cy="23" r="1.3" fill="#2a1c30"/><circle cx="23.2" cy="23" r="1.3" fill="#2a1c30"/><path d="M18 28h4" stroke="#8e4256" stroke-width="1.2" stroke-linecap="round"/><path d="M10 26l-2 9M30 26l2 9" stroke="#15101c" stroke-width="3" stroke-linecap="round"/></svg>', ICON_HOOD = '<svg viewBox="4 5 32 32" width="82%" height="82%"><path d="M5 36c1-16 6-29 15-29s14 13 15 29z" fill="#3a1d3a"/><path d="M8 36c1-12 5-22 12-22s11 10 12 22z" fill="#1c0f1e"/><ellipse cx="20" cy="25" rx="7" ry="8" fill="#e6dccd"/><path d="M13.5 22c1-4 3.5-5.5 6.5-5.5s5.5 1.5 6.5 5.5c-2.5-1.3-4.3-1.6-6.5-1.6s-4 .3-6.5 1.6z" fill="#15101c"/><path d="M15 25.5h3.4M21.6 25.5H25" stroke="#2a1c30" stroke-width="1.6" stroke-linecap="round"/><path d="M18.3 30.5h3.4" stroke="#8e4256" stroke-width="1.1" stroke-linecap="round"/></svg>', ICON_SWAP = '<svg viewBox="0 0 40 40" width="62%" height="62%" fill="none" stroke="rgba(239,230,208,.9)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14h22M24 8l6 6-6 6M32 26H10M16 20l-6 6 6 6"/></svg>';
   const COARSE = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   let root, stick, knob, btns = {}, rotate, active = false, fsTried = false;
   const st = { id: null, ox: 0, oy: 0 };
@@ -23,6 +24,8 @@
 #touch .b{position:absolute;pointer-events:auto;touch-action:none;border-radius:50%;display:flex;align-items:center;justify-content:center;
  font:600 calc(var(--b)*.32) Georgia,serif;color:rgba(239,230,208,.85);background:rgba(60,26,40,.38);border:2px solid rgba(239,230,208,.35)}
 #touch .b.down{background:rgba(212,160,90,.5)}
+#touch .b.sneak.down{background:rgba(120,70,140,.6);border-color:rgba(243,200,115,.9);box-shadow:0 0 14px rgba(243,200,115,.45)}
+#touch .b svg{pointer-events:none}
 #touch .b.small{font-size:calc(var(--b)*.22)}
 #rot{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;flex-direction:column;background:#120d18;color:#efe6d0;
  font:22px Georgia,serif;text-align:center;padding:20px}
@@ -63,6 +66,7 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     place(btns.action, big, pad, pad * 0.6 + sn + pad * 0.5);
     place(btns.pause, sm, pad, 0, pad);
     place(btns.map, sm, pad + sm * 1.25, 0, pad);
+    place(btns.swap, sm, pad, 0, pad + sm * 1.25);
     const portrait = h > w * 1.05;
     rotate.style.display = active && portrait ? 'flex' : 'none';
   }
@@ -109,8 +113,12 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     knob = document.createElement('div'); knob.className = 'knob'; stick.appendChild(knob);
     button('action', 'E', ['action']);
     { // sneak is a toggle: tap on, tap off (the joystick's small push sneaks too)
-      const b = document.createElement('div'); b.className = 'b small'; b.textContent = '🐾'; root.appendChild(b); btns.sneak = b;
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); sneakOn = !sneakOn; b.classList.toggle('down', sneakOn); });
+      const b = document.createElement('div'); b.className = 'b small sneak'; b.innerHTML = ICON_IVY; root.appendChild(b); btns.sneak = b;
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); sneakOn = !sneakOn; b.classList.toggle('down', sneakOn); b.innerHTML = sneakOn ? ICON_HOOD : ICON_IVY; });
+    }
+    { // swap sides
+      const b = document.createElement('div'); b.className = 'b small'; b.innerHTML = ICON_SWAP; root.appendChild(b); btns.swap = b;
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); G.save.set('lefty', G.save.get('lefty', false) !== true); });
     }
     button('pause', '❚❚', ['pause', 'back'], 'small');
     button('map', '▦', ['map'], 'small');
@@ -153,6 +161,10 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     window.addEventListener('keydown', () => { if (active && !COARSE) { active = false; G.touchMode = false; root.classList.remove('on'); rotate.style.display = 'none'; } });
     window.addEventListener('resize', () => { if (active) layout(); });
     document.addEventListener('contextmenu', (e) => e.preventDefault());
+    const stopZoom = (e) => { if (e.target.closest && (e.target.closest('#touch') || e.target.id === 'game')) e.preventDefault(); };
+    document.addEventListener('touchend', stopZoom, { passive: false });
+    document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+    document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
     if (COARSE) goTouchQuiet();
     layout(); requestAnimationFrame(tick);
   }

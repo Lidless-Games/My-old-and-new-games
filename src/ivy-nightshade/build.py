@@ -13,11 +13,15 @@ for f in ORDER:
 js = '\n'.join(parts).replace('</script>', '<\\/script>')
 html = f'''<!DOCTYPE html>
 <html lang="hu"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ivy Nightshade">
 <title>Ivy Nightshade</title>
 <meta name="author" content="Lidless">
 <!-- © 2026 Lidless. Licensed under CC BY-NC 4.0 (https://creativecommons.org/licenses/by-nc/4.0/) -->
-<style>html,body{{margin:0;height:100%;background:#000;overflow:hidden}}
+<style>html,body{{margin:0;height:100%;background:#000;overflow:hidden;touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:none}}body{{position:fixed;inset:0}}
 body{{display:flex;align-items:center;justify-content:center}}
 canvas{{display:block;image-rendering:auto;touch-action:none}}</style>
 </head><body><canvas id="game" width="960" height="540"></canvas>
