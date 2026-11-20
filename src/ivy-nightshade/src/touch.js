@@ -60,8 +60,7 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     const pad = Math.max(14, m * 0.04);
     const sn = big * 0.62;
     place(btns.sneak, sn, pad + (big - sn) / 2, pad * 0.6);
-    place(btns.jump, big, pad, pad * 0.6 + sn + pad * 0.5);
-    place(btns.action, big * 0.78, pad + big * 1.0, pad * 0.6 + sn * 0.6);
+    place(btns.action, big, pad, pad * 0.6 + sn + pad * 0.5);
     place(btns.pause, sm, pad, 0, pad);
     place(btns.map, sm, pad + sm * 1.25, 0, pad);
     const portrait = h > w * 1.05;
@@ -70,10 +69,11 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
 
   function setStick(dx, dy) {
     const v = V(), ax = Math.abs(dx), ay = Math.abs(dy);
-    const vertical = ay > VERT && ay > ax * 1.2;
-    v.left = !vertical && dx < -DEAD; v.right = !vertical && dx > DEAD;
-    v.sneak = sneakOn || (!vertical && ax > DEAD && ax < WALK);
-    v.up = dy < -VERT && ay > ax * 0.8; v.down = dy > VERT && ay > ax * 0.8;
+    const downward = dy > VERT && ay > ax * 1.2; // pulling straight down (hide, door) does not walk
+    v.left = !downward && dx < -DEAD; v.right = !downward && dx > DEAD;
+    v.sneak = sneakOn; // only the toggle sneaks, so a thumb slip can never drop out of it
+    v.up = v.jump = dy < -VERT && ay > ax * 0.5; // up jumps (and climbs ladders), diagonals jump sideways
+    v.down = dy > VERT && ay > ax * 0.8;
   }
 
   function scene() { return G.scenes && G.scenes.current; }
@@ -107,7 +107,6 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     const zone = document.createElement('div'); zone.className = 'zone'; root.appendChild(zone);
     stick = document.createElement('div'); stick.className = 'stick'; root.appendChild(stick);
     knob = document.createElement('div'); knob.className = 'knob'; stick.appendChild(knob);
-    button('jump', '⤒', ['jump']);
     button('action', 'E', ['action']);
     { // sneak is a toggle: tap on, tap off (the joystick's small push sneaks too)
       const b = document.createElement('div'); b.className = 'b small'; b.textContent = '🐾'; root.appendChild(b); btns.sneak = b;

@@ -232,10 +232,10 @@ window.G.CFG = {
       hand_left: 'bal oldalon',
       hand_right: 'jobb oldalon',
       controls_t1: 'Joystick (a képernyő egyik oldalán): húzd oldalra a mozgáshoz',
-      controls_t2: 'Kicsit elhúzva lopakodás, jobban elhúzva járás',
-      controls_t3: 'Joystick fel / le: létrán mászás',
+      controls_t2: 'Joystick fel (vagy ferdén fel): ugrás',
+      controls_t3: 'Joystick fel / le létrán: mászás',
       controls_t4: 'Joystick le búvóhely vagy ajtó előtt: elbújás, belépés',
-      controls_t5: '⤒ ugrás · 🐾 lopakodás be/ki · E cselekvés · ❚❚ szünet · ▦ térkép',
+      controls_t5: '🐾 lopakodás be/ki · E cselekvés · ❚❚ szünet · ▦ térkép',
       controls_t6: 'Tipp: lépj a zene ütemére – úgy halkabb vagy.',
       pause_title: 'Szünet',
       pause_resume: 'Folytatás',
@@ -375,10 +375,10 @@ window.G.CFG = {
       hand_left: 'on the left',
       hand_right: 'on the right',
       controls_t1: 'Joystick (one side of the screen): drag sideways to move',
-      controls_t2: 'A small push sneaks, a bigger push walks',
-      controls_t3: 'Joystick up / down: climb ladders',
+      controls_t2: 'Joystick up (or diagonally up): jump',
+      controls_t3: 'Joystick up / down on ladders: climb',
       controls_t4: 'Joystick down at a hiding spot or door: hide, go through',
-      controls_t5: '⤒ jump · 🐾 sneak on/off · E action · ❚❚ pause · ▦ map',
+      controls_t5: '🐾 sneak on/off · E action · ❚❚ pause · ▦ map',
       controls_t6: 'Tip: step to the beat of the music. You will be quieter.',
       pause_title: 'Paused',
       pause_resume: 'Resume',
@@ -8151,8 +8151,7 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     const pad = Math.max(14, m * 0.04);
     const sn = big * 0.62;
     place(btns.sneak, sn, pad + (big - sn) / 2, pad * 0.6);
-    place(btns.jump, big, pad, pad * 0.6 + sn + pad * 0.5);
-    place(btns.action, big * 0.78, pad + big * 1.0, pad * 0.6 + sn * 0.6);
+    place(btns.action, big, pad, pad * 0.6 + sn + pad * 0.5);
     place(btns.pause, sm, pad, 0, pad);
     place(btns.map, sm, pad + sm * 1.25, 0, pad);
     const portrait = h > w * 1.05;
@@ -8161,10 +8160,11 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
 
   function setStick(dx, dy) {
     const v = V(), ax = Math.abs(dx), ay = Math.abs(dy);
-    const vertical = ay > VERT && ay > ax * 1.2;
-    v.left = !vertical && dx < -DEAD; v.right = !vertical && dx > DEAD;
-    v.sneak = sneakOn || (!vertical && ax > DEAD && ax < WALK);
-    v.up = dy < -VERT && ay > ax * 0.8; v.down = dy > VERT && ay > ax * 0.8;
+    const downward = dy > VERT && ay > ax * 1.2; // pulling straight down (hide, door) does not walk
+    v.left = !downward && dx < -DEAD; v.right = !downward && dx > DEAD;
+    v.sneak = sneakOn; // only the toggle sneaks, so a thumb slip can never drop out of it
+    v.up = v.jump = dy < -VERT && ay > ax * 0.5; // up jumps (and climbs ladders), diagonals jump sideways
+    v.down = dy > VERT && ay > ax * 0.8;
   }
 
   function scene() { return G.scenes && G.scenes.current; }
@@ -8198,7 +8198,6 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     const zone = document.createElement('div'); zone.className = 'zone'; root.appendChild(zone);
     stick = document.createElement('div'); stick.className = 'stick'; root.appendChild(stick);
     knob = document.createElement('div'); knob.className = 'knob'; stick.appendChild(knob);
-    button('jump', '⤒', ['jump']);
     button('action', 'E', ['action']);
     { // sneak is a toggle: tap on, tap off (the joystick's small push sneaks too)
       const b = document.createElement('div'); b.className = 'b small'; b.textContent = '🐾'; root.appendChild(b); btns.sneak = b;
