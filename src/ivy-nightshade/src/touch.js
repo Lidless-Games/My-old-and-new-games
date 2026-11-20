@@ -3,7 +3,8 @@
 (function () {
   const G = window.G;
   const V = () => G.input.virtual;
-  let sneakOn = false;
+  let sneakOn = false, wasPlay = false;
+  const COARSE = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   let root, stick, knob, btns = {}, rotate, active = false, fsTried = false;
   const st = { id: null, ox: 0, oy: 0 };
   const DEAD = 12, WALK = 46, VERT = 34;
@@ -82,12 +83,14 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     root.classList.toggle('on', !!play);
     if (btns.map) btns.map.style.display = play && s.school ? 'flex' : 'none';
     if (!play && st.id !== null) { st.id = null; stick.style.display = 'none'; setStick(0, 0); }
-    if (!play && active) for (const a in V()) V()[a] = false;
-    else if (play && st.id === null) V().sneak = sneakOn;
+    if (!play && wasPlay) ['left', 'right', 'up', 'down', 'sneak', 'jump', 'action', 'pause', 'back', 'map'].forEach((a) => { V()[a] = false; });
+    wasPlay = !!play;
+    if (play && st.id === null) V().sneak = sneakOn;
     if (G.touchFlip !== G.save.get('lefty', false)) { G.touchFlip = G.save.get('lefty', false); layout(); }
     requestAnimationFrame(tick);
   }
 
+  function goTouchQuiet() { active = true; G.touchMode = true; }
   function goTouch() {
     if (!active) { active = true; G.touchMode = true; layout(); }
     if (!fsTried) {
@@ -148,9 +151,10 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
       V().confirm = true; setTimeout(() => { V().confirm = false; }, 60);
     });
     window.addEventListener('touchstart', () => goTouch(), { capture: true, passive: true });
-    window.addEventListener('keydown', () => { if (active) { active = false; G.touchMode = false; root.classList.remove('on'); rotate.style.display = 'none'; } });
+    window.addEventListener('keydown', () => { if (active && !COARSE) { active = false; G.touchMode = false; root.classList.remove('on'); rotate.style.display = 'none'; } });
     window.addEventListener('resize', () => { if (active) layout(); });
     document.addEventListener('contextmenu', (e) => e.preventDefault());
+    if (COARSE) goTouchQuiet();
     layout(); requestAnimationFrame(tick);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
