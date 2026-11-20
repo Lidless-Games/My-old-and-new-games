@@ -10,7 +10,7 @@
   const TA_FETCH_T = 2.5, TA_VISIT_T = 9;
   const TA_VIEW = 5, TA_ANG = 28 * Math.PI / 180, TA_RUN = 150, TA_PATROL = 50, TA_COOLDOWN = 6;
   const CAT_HOME = 3 * T, CAT_STARTLE_R = 2.5 * T, CAT_VASE_R = 4 * T, CAT_COOLDOWN = 6, CAT_SPEED = 24;
-  const BRIBE_R = 1.3 * T, TA_ASK = 3, ASK_R = 6 * T, BEAT_LOOPS = 2;
+  const BRIBE_R = 1.3 * T, TA_ASK = 3, ASK_R = (TA_VIEW + 1.5) * T, BEAT_LOOPS = 2;
 
   function sfx(name, opts) { if (G.sfx && G.sfx.play) G.sfx.play(name, opts); }
   function art(name, ctx, x, y, o) { const A = G.art; if (A && A[name]) { A[name](ctx, x, y, o); return true; } return false; }
@@ -196,6 +196,7 @@
 
     // ------------------------------------------------------------ reset
     reset() {
+      if (this.giving) { this.giving = null; if (this.player) { this.player.autoDir = 0; } }
       this._caught = false; this.balloons = [];
       for (const j of this.janitors) {
         if (j.beats) { const B = j.beats[0]; j.beatI = 0; j.loops = 0; j.home = { y: B.y, from: B.from, to: B.to, seg: B.seg }; }
@@ -225,7 +226,7 @@
       for (const ta of this.tattles) this._tattle(ta, dt, p);
       for (const c of this.cats) this._cat(c, dt, p);
       this._balloons(dt, p);
-      this._bribe(p);
+      if (this.giving) this._giveStep(p, dt); else this._bribe(p);
     }
 
     _janitor(j, dt, p) {
@@ -401,7 +402,7 @@
     }
 
     _tattle(ta, dt, p) {
-      if (ta.state === 'eat') return;
+      if (ta.state === 'eat' || ta.state === 'wait') return;
       ta.cool = Math.max(0, ta.cool - dt);
       const eyeY = ta.y - 38;
       if (ta.state === 'walk') {
@@ -495,9 +496,29 @@
       if (!(G.input.pressed('action') || ((asking || this._bribeTarget()) && G.input.pressed('down')))) return;
       const ta = asking || this._bribeTarget();
       if (!ta) return;
-      G.inv.candy--; ta.bribed = true; ta.state = 'eat';
+      G.inv.candy--; ta.bribed = true;
+      if (Math.abs(ta.x - p.x) > 1.2 * T) { // "It's only me – I brought you this!" – Ivy walks over with the sweet
+        ta.state = 'wait'; ta.facing = p.x >= ta.x ? 1 : -1;
+        this.giving = { ta, t: 0 }; p.control = false;
+        G.events.emit('ivy_offer', { x: p.x, y: p.y });
+        return;
+      }
+      this._handOver(ta);
+    }
+    _handOver(ta) {
+      ta.state = 'eat';
       sfx('checkpoint', { vol: 0.6 });
       G.events.emit('bribed', { x: ta.x, y: ta.y, who: 'tattle' });
+    }
+    _giveStep(p, dt) { // the walk over to the waiting child
+      const g = this.giving; g.t += dt;
+      const d = g.ta.x - p.x;
+      p.autoDir = Math.sign(d);
+      if (Math.abs(d) < 1.0 * T) p.autoDir = 0; // arrived: wait until she has said her line
+      if ((Math.abs(d) < 1.0 * T && g.t > 1.6) || g.t > 4 || p.state === 'hidden') {
+        p.autoDir = 0; p.control = true; this.giving = null;
+        this._handOver(g.ta);
+      }
     }
 
     _bribeTarget() {
@@ -544,7 +565,7 @@
       }
       for (const ta of this.tattles) {
         if (ta.away) continue;
-        const st = ta.state === 'eat' ? 'eat' : ta.state === 'run' ? 'run' : 'walk';
+        const st = ta.state === 'eat' ? 'eat' : ta.state === 'run' ? 'run' : (ta.state === 'wait' || ta.state === 'ask') ? 'idle' : 'walk';
         if (!art('drawTattle', ctx, ta.x, ta.y, { facing: ta.facing, t: t + ta.walkT, state: st })) {
           ctx.fillStyle = st === 'run' ? '#f3a03a' : '#c9cfe0'; ctx.fillRect(ta.x - 8, ta.y - 40, 16, 40);
         }

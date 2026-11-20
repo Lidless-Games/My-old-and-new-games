@@ -115,6 +115,7 @@
       G.events.on('twins_out', (d) => { this.say(d.x, d.y - 40, t('twins_out'), 'npc', 1.8); });
       G.events.on('tattle_ask', (d) => { this.say(d.x, d.y - 60, t('tattle_ask'), 'npc', 2.6); });
       G.events.on('tattle_doubt', (d) => { this.say(d.x, d.y - 60, t('tattle_doubt'), 'npc', 2.2); });
+      G.events.on('ivy_offer', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_offer'), 'ivy', 2.8); this.bubbles[0].follow = true; });
       G.events.on('tattle_call', (d) => { this.say(d.x, d.y - 60, t('tattle_call'), 'npc', 2.4); });
       G.events.on('bribed', (d) => { this.say(d.x, d.y - 50, t('tattle_bribed'), 'npc', 3); });
       G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
@@ -646,8 +647,8 @@
     hint() {
       const p = this.player;
       if (this.mode !== 'play') return '';
+      if (this.npcs && this.npcs.askPrompt) { const k = this.npcs.askPrompt(); if (k) return t(k); } // always: it is a choice, not a tip
       if (G.save.get('hints', true) === false) return ''; // hints switched off in the menu
-      if (this.npcs && this.npcs.askPrompt) { const k = this.npcs.askPrompt(); if (k) return t(k); }
       if (p.state === 'hidden') return t('hint_unhide');
       if (this.stealth.nearestHide()) return t('hint_hide');
       if (this.school && this.school.nearestAction) { const k = this.school.nearestAction(); if (k) return t(k); }

@@ -170,7 +170,8 @@
       if (this.state === 'hidden') { this.vx = 0; this.vy = 0; this.speed = 0; this.stillTime = 0; this.faded = false; this.fadeAlpha = 1; return; }
 
       const ctl = this.control, inp = G.input;
-      const left = ctl && inp.down('left'), right = ctl && inp.down('right');
+      const auto = this.autoDir || 0; // scripted walk (e.g. walking over to hand over a sweet)
+      const left = (ctl && inp.down('left')) || auto < 0, right = (ctl && inp.down('right')) || auto > 0;
       const up = ctl && inp.down('up'), down = ctl && inp.down('down');
       const sneakHeld = ctl && inp.down('sneak');
       const jumpHeld = ctl && inp.down('jump');

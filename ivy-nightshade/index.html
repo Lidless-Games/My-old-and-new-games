@@ -222,7 +222,8 @@ window.G.CFG = {
       hint_twins: 'Beszökött ikrek! Vízibombával dobálnak – a loccsanásra jön az őr. Bújj el, vagy kerüld meg őket!',
       tattle_ask: 'Szellem vagy?',
       tattle_doubt: 'Hm… csak képzelődtem.',
-      hint_candy_ask: '↓ / E – cukorkát adsz neki, mielőtt felismer!',
+      hint_candy_ask: '↓ / E – cukor átadása, mielőtt felismer!',
+      ivy_offer: 'Csak én vagyok, és ezt neked hoztam!',
       hint_candy_none: 'Nincs cukorkád… gyorsan bújj el!',
       tattle_call: 'Nagypapa! Ivy Nightshade beszökött, gyere gyorsan!',
       tattle_bribed: 'Mmm, cukor! …Kit? Nem láttam senkit.',
@@ -367,7 +368,8 @@ window.G.CFG = {
       hint_twins: 'Twins who sneaked in! They throw water bombs – the splash brings the janitor. Hide or get round them!',
       tattle_ask: 'Are you a ghost?',
       tattle_doubt: 'Hm… must have imagined it.',
-      hint_candy_ask: '↓ / E – give her a sweet before she recognises you!',
+      hint_candy_ask: '↓ / E – hand over a sweet before she recognises you!',
+      ivy_offer: 'It\'s only me – and I brought you this!',
       hint_candy_none: 'No sweets… hide, quick!',
       tattle_call: 'Grandpa! Ivy Nightshade sneaked in, come quick!',
       tattle_bribed: 'Mmm, candy! …Who? I didn\'t see anybody.',
@@ -5335,7 +5337,8 @@ window.G.CFG = {
       if (this.state === 'hidden') { this.vx = 0; this.vy = 0; this.speed = 0; this.stillTime = 0; this.faded = false; this.fadeAlpha = 1; return; }
 
       const ctl = this.control, inp = G.input;
-      const left = ctl && inp.down('left'), right = ctl && inp.down('right');
+      const auto = this.autoDir || 0; // scripted walk (e.g. walking over to hand over a sweet)
+      const left = (ctl && inp.down('left')) || auto < 0, right = (ctl && inp.down('right')) || auto > 0;
       const up = ctl && inp.down('up'), down = ctl && inp.down('down');
       const sneakHeld = ctl && inp.down('sneak');
       const jumpHeld = ctl && inp.down('jump');
@@ -6823,7 +6826,7 @@ window.G.CFG = {
   const TA_FETCH_T = 2.5, TA_VISIT_T = 9;
   const TA_VIEW = 5, TA_ANG = 28 * Math.PI / 180, TA_RUN = 150, TA_PATROL = 50, TA_COOLDOWN = 6;
   const CAT_HOME = 3 * T, CAT_STARTLE_R = 2.5 * T, CAT_VASE_R = 4 * T, CAT_COOLDOWN = 6, CAT_SPEED = 24;
-  const BRIBE_R = 1.3 * T, TA_ASK = 3, ASK_R = 6 * T, BEAT_LOOPS = 2;
+  const BRIBE_R = 1.3 * T, TA_ASK = 3, ASK_R = (TA_VIEW + 1.5) * T, BEAT_LOOPS = 2;
 
   function sfx(name, opts) { if (G.sfx && G.sfx.play) G.sfx.play(name, opts); }
   function art(name, ctx, x, y, o) { const A = G.art; if (A && A[name]) { A[name](ctx, x, y, o); return true; } return false; }
@@ -7009,6 +7012,7 @@ window.G.CFG = {
 
     // ------------------------------------------------------------ reset
     reset() {
+      if (this.giving) { this.giving = null; if (this.player) { this.player.autoDir = 0; } }
       this._caught = false; this.balloons = [];
       for (const j of this.janitors) {
         if (j.beats) { const B = j.beats[0]; j.beatI = 0; j.loops = 0; j.home = { y: B.y, from: B.from, to: B.to, seg: B.seg }; }
@@ -7038,7 +7042,7 @@ window.G.CFG = {
       for (const ta of this.tattles) this._tattle(ta, dt, p);
       for (const c of this.cats) this._cat(c, dt, p);
       this._balloons(dt, p);
-      this._bribe(p);
+      if (this.giving) this._giveStep(p, dt); else this._bribe(p);
     }
 
     _janitor(j, dt, p) {
@@ -7214,7 +7218,7 @@ window.G.CFG = {
     }
 
     _tattle(ta, dt, p) {
-      if (ta.state === 'eat') return;
+      if (ta.state === 'eat' || ta.state === 'wait') return;
       ta.cool = Math.max(0, ta.cool - dt);
       const eyeY = ta.y - 38;
       if (ta.state === 'walk') {
@@ -7308,9 +7312,29 @@ window.G.CFG = {
       if (!(G.input.pressed('action') || ((asking || this._bribeTarget()) && G.input.pressed('down')))) return;
       const ta = asking || this._bribeTarget();
       if (!ta) return;
-      G.inv.candy--; ta.bribed = true; ta.state = 'eat';
+      G.inv.candy--; ta.bribed = true;
+      if (Math.abs(ta.x - p.x) > 1.2 * T) { // "It's only me – I brought you this!" – Ivy walks over with the sweet
+        ta.state = 'wait'; ta.facing = p.x >= ta.x ? 1 : -1;
+        this.giving = { ta, t: 0 }; p.control = false;
+        G.events.emit('ivy_offer', { x: p.x, y: p.y });
+        return;
+      }
+      this._handOver(ta);
+    }
+    _handOver(ta) {
+      ta.state = 'eat';
       sfx('checkpoint', { vol: 0.6 });
       G.events.emit('bribed', { x: ta.x, y: ta.y, who: 'tattle' });
+    }
+    _giveStep(p, dt) { // the walk over to the waiting child
+      const g = this.giving; g.t += dt;
+      const d = g.ta.x - p.x;
+      p.autoDir = Math.sign(d);
+      if (Math.abs(d) < 1.0 * T) p.autoDir = 0; // arrived: wait until she has said her line
+      if ((Math.abs(d) < 1.0 * T && g.t > 1.6) || g.t > 4 || p.state === 'hidden') {
+        p.autoDir = 0; p.control = true; this.giving = null;
+        this._handOver(g.ta);
+      }
     }
 
     _bribeTarget() {
@@ -7357,7 +7381,7 @@ window.G.CFG = {
       }
       for (const ta of this.tattles) {
         if (ta.away) continue;
-        const st = ta.state === 'eat' ? 'eat' : ta.state === 'run' ? 'run' : 'walk';
+        const st = ta.state === 'eat' ? 'eat' : ta.state === 'run' ? 'run' : (ta.state === 'wait' || ta.state === 'ask') ? 'idle' : 'walk';
         if (!art('drawTattle', ctx, ta.x, ta.y, { facing: ta.facing, t: t + ta.walkT, state: st })) {
           ctx.fillStyle = st === 'run' ? '#f3a03a' : '#c9cfe0'; ctx.fillRect(ta.x - 8, ta.y - 40, 16, 40);
         }
@@ -8402,6 +8426,7 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
       G.events.on('twins_out', (d) => { this.say(d.x, d.y - 40, t('twins_out'), 'npc', 1.8); });
       G.events.on('tattle_ask', (d) => { this.say(d.x, d.y - 60, t('tattle_ask'), 'npc', 2.6); });
       G.events.on('tattle_doubt', (d) => { this.say(d.x, d.y - 60, t('tattle_doubt'), 'npc', 2.2); });
+      G.events.on('ivy_offer', () => { const p = this.player; this.say(p.x, p.y - 56, t('ivy_offer'), 'ivy', 2.8); this.bubbles[0].follow = true; });
       G.events.on('tattle_call', (d) => { this.say(d.x, d.y - 60, t('tattle_call'), 'npc', 2.4); });
       G.events.on('bribed', (d) => { this.say(d.x, d.y - 50, t('tattle_bribed'), 'npc', 3); });
       G.events.on('ghost_leave', (d) => { this.say(d.x, d.y - 60, t('ghost_leave_' + U.randInt(1, 3)), 'ghost', 2.4); });
@@ -8933,8 +8958,8 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     hint() {
       const p = this.player;
       if (this.mode !== 'play') return '';
+      if (this.npcs && this.npcs.askPrompt) { const k = this.npcs.askPrompt(); if (k) return t(k); } // always: it is a choice, not a tip
       if (G.save.get('hints', true) === false) return ''; // hints switched off in the menu
-      if (this.npcs && this.npcs.askPrompt) { const k = this.npcs.askPrompt(); if (k) return t(k); }
       if (p.state === 'hidden') return t('hint_unhide');
       if (this.stealth.nearestHide()) return t('hint_hide');
       if (this.school && this.school.nearestAction) { const k = this.school.nearestAction(); if (k) return t(k); }
