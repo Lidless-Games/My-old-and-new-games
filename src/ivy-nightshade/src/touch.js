@@ -61,9 +61,8 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
       if (flip) { b.style.left = right + 'px'; b.style.right = ''; } else { b.style.right = right + 'px'; b.style.left = ''; } if (top != null) { b.style.top = top + 'px'; b.style.bottom = ''; } else { b.style.bottom = bottom + 'px'; b.style.top = ''; }
     };
     const pad = Math.max(14, m * 0.04);
-    const bb = big * 0.9; // the two thumb buttons are the same size
-    place(btns.sneak, bb, pad, pad * 0.6);
-    place(btns.action, bb, pad, pad * 0.6 + bb + pad * 0.6);
+    const bb = big * 1.1; // sneaking is the one thumb button: big and easy to hit
+    place(btns.sneak, bb, pad, pad * 1.4);
     place(btns.pause, sm, pad, 0, pad);
     place(btns.map, sm, pad + sm * 1.25, 0, pad);
     place(btns.swap, sm, pad, 0, pad + sm * 1.25);
@@ -111,7 +110,6 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     const zone = document.createElement('div'); zone.className = 'zone'; root.appendChild(zone);
     stick = document.createElement('div'); stick.className = 'stick'; root.appendChild(stick);
     knob = document.createElement('div'); knob.className = 'knob'; stick.appendChild(knob);
-    button('action', 'E', ['action']);
     { // sneak is a toggle: tap on, tap off (the joystick's small push sneaks too)
       const b = document.createElement('div'); b.className = 'b sneak'; b.innerHTML = ICON_IVY; root.appendChild(b); btns.sneak = b;
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); sneakOn = !sneakOn; b.classList.toggle('down', sneakOn); b.innerHTML = sneakOn ? ICON_HOOD : ICON_IVY; });

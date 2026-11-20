@@ -53,7 +53,7 @@
       controls_t2: 'Joystick fel (vagy ferdén fel): ugrás',
       controls_t3: 'Joystick fel / le létrán: mászás',
       controls_t4: 'Joystick le búvóhely vagy ajtó előtt: elbújás, belépés',
-      controls_t5: 'Ivy-fej gomb: lopakodás be/ki · E cselekvés · ❚❚ szünet · ▦ térkép',
+      controls_t5: 'Ivy-fej gomb: lopakodás be/ki · ❚❚ szünet · ▦ térkép',
       controls_t6: 'Tipp: lépj a zene ütemére – úgy halkabb vagy.',
       pause_title: 'Szünet',
       pause_resume: 'Folytatás',
@@ -198,7 +198,7 @@
       controls_t2: 'Joystick up (or diagonally up): jump',
       controls_t3: 'Joystick up / down on ladders: climb',
       controls_t4: 'Joystick down at a hiding spot or door: hide, go through',
-      controls_t5: 'Ivy head button: sneak on/off · E action · ❚❚ pause · ▦ map',
+      controls_t5: 'Ivy head button: sneak on/off · ❚❚ pause · ▦ map',
       controls_t6: 'Tip: step to the beat of the music. You will be quieter.',
       pause_title: 'Paused',
       pause_resume: 'Resume',
@@ -312,6 +312,7 @@
   G.t = function (key, vars) {
     const cur = G.STRINGS[G.i18n.lang] || {};
     let s = (G.touchMode && cur[key + '_t'] !== undefined) ? cur[key + '_t'] : cur[key]; // touch-screen wording when there is one
+    if (G.touchMode && typeof s === 'string') s = s.replace(/ \/ E\b/g, '').replace(/\(E\)/g, '(↓)').replace(/(^|\s)E \/ /g, '$1'); // no E button on touch screens: the joystick's down does it
     if (s === undefined) {
       const other = G.STRINGS[G.i18n.lang === 'hu' ? 'en' : 'hu'] || {};
       s = other[key];
