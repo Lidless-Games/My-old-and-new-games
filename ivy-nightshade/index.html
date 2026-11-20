@@ -254,7 +254,7 @@ window.G.CFG = {
       controls_t2: 'Joystick fel (vagy ferdén fel): ugrás',
       controls_t3: 'Joystick fel / le létrán: mászás',
       controls_t4: 'Joystick le búvóhely vagy ajtó előtt: elbújás, belépés',
-      controls_t5: '🐾 lopakodás be/ki · E cselekvés · ❚❚ szünet · ▦ térkép',
+      controls_t5: 'Ivy-fej gomb: lopakodás be/ki · E cselekvés · ❚❚ szünet · ▦ térkép',
       controls_t6: 'Tipp: lépj a zene ütemére – úgy halkabb vagy.',
       pause_title: 'Szünet',
       pause_resume: 'Folytatás',
@@ -264,11 +264,11 @@ window.G.CFG = {
       hint_hide: '↓ / E – elbújás',
       hint_unhide: 'Mozdulj, ha előbújnál',
       hint_sneak: 'Tartsd a Shiftet: lopakodás',
-      hint_sneak_t: '🐾 gomb: lopakodás be/ki',
+      hint_sneak_t: 'Ivy-fej gomb: lopakodás be/ki (csuklyában lopakodik)',
       hint_beat: 'Lépj a zene ütemére – úgy halkabb vagy!',
       hint_creak: 'Nyikorgó padló – ugord át!',
       hint_chandelier: 'Csillár! Húzd le a fejed – lopakodj át alatta (Shift)!',
-      hint_chandelier_t: 'Csillár! Húzd le a fejed – lopakodj át alatta (🐾)!',
+      hint_chandelier_t: 'Csillár! Húzd le a fejed – lopakodj át alatta (Ivy-fej gomb)!',
       hint_sleeper: 'Alvó a közelben – csak lopakodva!',
       hint_exit: 'Lépcső lefelé',
       hint_ghost: 'Szellem! Bújj el, vagy állj meg teljesen mozdulatlanul.',
@@ -340,7 +340,7 @@ window.G.CFG = {
       hint_locked_red: 'Zárva – a piros kulcs kell hozzá. Keresd meg valahol az iskolában!',
       hint_locked_blue: 'Zárva – a kék kulcs kell hozzá. Keresd meg valahol az iskolában!',
       hint_locked_green: 'Zárva – a zöld kulcs kell hozzá. Keresd meg valahol az iskolában!',
-      hint_candy_give: 'E – cukorka odaadása',
+      hint_candy_give: '↓ / E – cukorka odaadása',
       hint_janitor: 'Iskolaőr! Ő mozdulatlanul is lát – bújj el!',
       caught_janitor: 'Megvagy! Iskolai szünet van, kisasszony, mit keresel itt éjjel? Felhívom a szüleidet, hogy jöjjenek érted!',
       ivy_home_wake: 'Itthon ébredtem, az ágyam mellett. Még szerencse, hogy a tekercs még megvan.',
@@ -399,7 +399,7 @@ window.G.CFG = {
       controls_t2: 'Joystick up (or diagonally up): jump',
       controls_t3: 'Joystick up / down on ladders: climb',
       controls_t4: 'Joystick down at a hiding spot or door: hide, go through',
-      controls_t5: '🐾 sneak on/off · E action · ❚❚ pause · ▦ map',
+      controls_t5: 'Ivy head button: sneak on/off · E action · ❚❚ pause · ▦ map',
       controls_t6: 'Tip: step to the beat of the music. You will be quieter.',
       pause_title: 'Paused',
       pause_resume: 'Resume',
@@ -409,11 +409,11 @@ window.G.CFG = {
       hint_hide: '↓ / E – hide',
       hint_unhide: 'Move if you want to come out',
       hint_sneak: 'Hold Shift: sneak',
-      hint_sneak_t: '🐾 button: sneak on/off',
+      hint_sneak_t: 'Ivy head button: sneak on/off (hooded = sneaking)',
       hint_beat: 'Step to the beat. That is quieter!',
       hint_creak: 'Creaky boards – jump over them!',
       hint_chandelier: 'Chandelier! Duck your head – sneak under it (Shift)!',
-      hint_chandelier_t: 'Chandelier! Duck your head – sneak under it (🐾)!',
+      hint_chandelier_t: 'Chandelier! Duck your head – sneak under it (Ivy head button)!',
       hint_sleeper: 'Someone is asleep – sneak only!',
       hint_exit: 'Stairs down',
       hint_ghost: 'A ghost! Hide, or stand perfectly still.',
@@ -485,7 +485,7 @@ window.G.CFG = {
       hint_locked_red: 'Locked – it needs the red key. Search the school for it!',
       hint_locked_blue: 'Locked – it needs the blue key. Search the school for it!',
       hint_locked_green: 'Locked – it needs the green key. Search the school for it!',
-      hint_candy_give: 'E – give candy',
+      hint_candy_give: '↓ / E – give candy',
       hint_janitor: 'Janitor! He sees you even if you stand still – hide!',
       caught_janitor: 'Got you! It\'s the school holidays, young lady, what are you doing here at night? I\'m calling your parents to come and fetch you!',
       ivy_home_wake: 'Woke up at home, next to my bed. Lucky the scroll is still here.',
@@ -7304,7 +7304,7 @@ window.G.CFG = {
     _bribe(p) {
       if (!p || p.state === 'hidden') return;
       const asking = this._askTarget();
-      if (!(G.input.pressed('action') || (asking && G.input.pressed('down')))) return;
+      if (!(G.input.pressed('action') || ((asking || this._bribeTarget()) && G.input.pressed('down')))) return;
       const ta = asking || this._bribeTarget();
       if (!ta) return;
       G.inv.candy--; ta.bribed = true; ta.state = 'eat';
@@ -8118,7 +8118,7 @@ window.G.CFG = {
   const G = window.G;
   const V = () => G.input.virtual;
   let sneakOn = false, wasPlay = false;
-  const ICON_IVY = '<svg viewBox="7 6 26 30" width="78%" height="78%"><path d="M9 20c0-8 5-13 11-13s11 5 11 13v12h-4V22H13v10H9z" fill="#15101c"/><ellipse cx="20" cy="22" rx="8" ry="9" fill="#efe6d8"/><path d="M12 19c1-6 4-8 8-8s7 2 8 8c-3-2-5-2-8-2s-5 0-8 2z" fill="#15101c"/><circle cx="16.8" cy="23" r="1.3" fill="#2a1c30"/><circle cx="23.2" cy="23" r="1.3" fill="#2a1c30"/><path d="M18 28h4" stroke="#8e4256" stroke-width="1.2" stroke-linecap="round"/><path d="M10 26l-2 9M30 26l2 9" stroke="#15101c" stroke-width="3" stroke-linecap="round"/></svg>', ICON_HOOD = '<svg viewBox="4 5 32 32" width="82%" height="82%"><path d="M5 36c1-16 6-29 15-29s14 13 15 29z" fill="#3a1d3a"/><path d="M8 36c1-12 5-22 12-22s11 10 12 22z" fill="#1c0f1e"/><ellipse cx="20" cy="25" rx="7" ry="8" fill="#e6dccd"/><path d="M13.5 22c1-4 3.5-5.5 6.5-5.5s5.5 1.5 6.5 5.5c-2.5-1.3-4.3-1.6-6.5-1.6s-4 .3-6.5 1.6z" fill="#15101c"/><path d="M15 25.5h3.4M21.6 25.5H25" stroke="#2a1c30" stroke-width="1.6" stroke-linecap="round"/><path d="M18.3 30.5h3.4" stroke="#8e4256" stroke-width="1.1" stroke-linecap="round"/></svg>', ICON_SWAP = '<svg viewBox="0 0 40 40" width="62%" height="62%" fill="none" stroke="rgba(239,230,208,.9)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14h22M24 8l6 6-6 6M32 26H10M16 20l-6 6 6 6"/></svg>';
+  const ICON_IVY = '<svg viewBox="5 4 30 34" width="66%" height="66%" style="overflow:hidden"><path d="M9 20c0-8 5-13 11-13s11 5 11 13v12h-4V22H13v10H9z" fill="#15101c"/><ellipse cx="20" cy="22" rx="8" ry="9" fill="#efe6d8"/><path d="M12 19c1-6 4-8 8-8s7 2 8 8c-3-2-5-2-8-2s-5 0-8 2z" fill="#15101c"/><circle cx="16.8" cy="23" r="1.3" fill="#2a1c30"/><circle cx="23.2" cy="23" r="1.3" fill="#2a1c30"/><path d="M18 28h4" stroke="#8e4256" stroke-width="1.2" stroke-linecap="round"/><path d="M10 26l-2 9M30 26l2 9" stroke="#15101c" stroke-width="3" stroke-linecap="round"/></svg>', ICON_HOOD = '<svg viewBox="3 4 34 34" width="70%" height="70%" style="overflow:hidden"><path d="M5 36c1-16 6-29 15-29s14 13 15 29z" fill="#3a1d3a"/><path d="M8 36c1-12 5-22 12-22s11 10 12 22z" fill="#1c0f1e"/><ellipse cx="20" cy="25" rx="7" ry="8" fill="#e6dccd"/><path d="M13.5 22c1-4 3.5-5.5 6.5-5.5s5.5 1.5 6.5 5.5c-2.5-1.3-4.3-1.6-6.5-1.6s-4 .3-6.5 1.6z" fill="#15101c"/><path d="M15 25.5h3.4M21.6 25.5H25" stroke="#2a1c30" stroke-width="1.6" stroke-linecap="round"/><path d="M18.3 30.5h3.4" stroke="#8e4256" stroke-width="1.1" stroke-linecap="round"/></svg>', ICON_SWAP = '<svg viewBox="0 0 40 40" width="62%" height="62%" fill="none" stroke="rgba(239,230,208,.9)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14h22M24 8l6 6-6 6M32 26H10M16 20l-6 6 6 6"/></svg>';
   const COARSE = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   let root, stick, knob, btns = {}, rotate, active = false, fsTried = false;
   const st = { id: null, ox: 0, oy: 0 };
@@ -8175,9 +8175,9 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
       if (flip) { b.style.left = right + 'px'; b.style.right = ''; } else { b.style.right = right + 'px'; b.style.left = ''; } if (top != null) { b.style.top = top + 'px'; b.style.bottom = ''; } else { b.style.bottom = bottom + 'px'; b.style.top = ''; }
     };
     const pad = Math.max(14, m * 0.04);
-    const sn = big * 0.62;
-    place(btns.sneak, sn, pad + (big - sn) / 2, pad * 0.6);
-    place(btns.action, big, pad, pad * 0.6 + sn + pad * 0.5);
+    const bb = big * 0.9; // the two thumb buttons are the same size
+    place(btns.sneak, bb, pad, pad * 0.6);
+    place(btns.action, bb, pad, pad * 0.6 + bb + pad * 0.6);
     place(btns.pause, sm, pad, 0, pad);
     place(btns.map, sm, pad + sm * 1.25, 0, pad);
     place(btns.swap, sm, pad, 0, pad + sm * 1.25);
@@ -8227,7 +8227,7 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     knob = document.createElement('div'); knob.className = 'knob'; stick.appendChild(knob);
     button('action', 'E', ['action']);
     { // sneak is a toggle: tap on, tap off (the joystick's small push sneaks too)
-      const b = document.createElement('div'); b.className = 'b small sneak'; b.innerHTML = ICON_IVY; root.appendChild(b); btns.sneak = b;
+      const b = document.createElement('div'); b.className = 'b sneak'; b.innerHTML = ICON_IVY; root.appendChild(b); btns.sneak = b;
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); sneakOn = !sneakOn; b.classList.toggle('down', sneakOn); b.innerHTML = sneakOn ? ICON_HOOD : ICON_IVY; });
     }
     { // swap sides

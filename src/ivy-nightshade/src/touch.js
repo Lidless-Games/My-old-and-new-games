@@ -4,7 +4,7 @@
   const G = window.G;
   const V = () => G.input.virtual;
   let sneakOn = false, wasPlay = false;
-  const ICON_IVY = '<svg viewBox="7 6 26 30" width="78%" height="78%"><path d="M9 20c0-8 5-13 11-13s11 5 11 13v12h-4V22H13v10H9z" fill="#15101c"/><ellipse cx="20" cy="22" rx="8" ry="9" fill="#efe6d8"/><path d="M12 19c1-6 4-8 8-8s7 2 8 8c-3-2-5-2-8-2s-5 0-8 2z" fill="#15101c"/><circle cx="16.8" cy="23" r="1.3" fill="#2a1c30"/><circle cx="23.2" cy="23" r="1.3" fill="#2a1c30"/><path d="M18 28h4" stroke="#8e4256" stroke-width="1.2" stroke-linecap="round"/><path d="M10 26l-2 9M30 26l2 9" stroke="#15101c" stroke-width="3" stroke-linecap="round"/></svg>', ICON_HOOD = '<svg viewBox="4 5 32 32" width="82%" height="82%"><path d="M5 36c1-16 6-29 15-29s14 13 15 29z" fill="#3a1d3a"/><path d="M8 36c1-12 5-22 12-22s11 10 12 22z" fill="#1c0f1e"/><ellipse cx="20" cy="25" rx="7" ry="8" fill="#e6dccd"/><path d="M13.5 22c1-4 3.5-5.5 6.5-5.5s5.5 1.5 6.5 5.5c-2.5-1.3-4.3-1.6-6.5-1.6s-4 .3-6.5 1.6z" fill="#15101c"/><path d="M15 25.5h3.4M21.6 25.5H25" stroke="#2a1c30" stroke-width="1.6" stroke-linecap="round"/><path d="M18.3 30.5h3.4" stroke="#8e4256" stroke-width="1.1" stroke-linecap="round"/></svg>', ICON_SWAP = '<svg viewBox="0 0 40 40" width="62%" height="62%" fill="none" stroke="rgba(239,230,208,.9)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14h22M24 8l6 6-6 6M32 26H10M16 20l-6 6 6 6"/></svg>';
+  const ICON_IVY = '<svg viewBox="5 4 30 34" width="66%" height="66%" style="overflow:hidden"><path d="M9 20c0-8 5-13 11-13s11 5 11 13v12h-4V22H13v10H9z" fill="#15101c"/><ellipse cx="20" cy="22" rx="8" ry="9" fill="#efe6d8"/><path d="M12 19c1-6 4-8 8-8s7 2 8 8c-3-2-5-2-8-2s-5 0-8 2z" fill="#15101c"/><circle cx="16.8" cy="23" r="1.3" fill="#2a1c30"/><circle cx="23.2" cy="23" r="1.3" fill="#2a1c30"/><path d="M18 28h4" stroke="#8e4256" stroke-width="1.2" stroke-linecap="round"/><path d="M10 26l-2 9M30 26l2 9" stroke="#15101c" stroke-width="3" stroke-linecap="round"/></svg>', ICON_HOOD = '<svg viewBox="3 4 34 34" width="70%" height="70%" style="overflow:hidden"><path d="M5 36c1-16 6-29 15-29s14 13 15 29z" fill="#3a1d3a"/><path d="M8 36c1-12 5-22 12-22s11 10 12 22z" fill="#1c0f1e"/><ellipse cx="20" cy="25" rx="7" ry="8" fill="#e6dccd"/><path d="M13.5 22c1-4 3.5-5.5 6.5-5.5s5.5 1.5 6.5 5.5c-2.5-1.3-4.3-1.6-6.5-1.6s-4 .3-6.5 1.6z" fill="#15101c"/><path d="M15 25.5h3.4M21.6 25.5H25" stroke="#2a1c30" stroke-width="1.6" stroke-linecap="round"/><path d="M18.3 30.5h3.4" stroke="#8e4256" stroke-width="1.1" stroke-linecap="round"/></svg>', ICON_SWAP = '<svg viewBox="0 0 40 40" width="62%" height="62%" fill="none" stroke="rgba(239,230,208,.9)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14h22M24 8l6 6-6 6M32 26H10M16 20l-6 6 6 6"/></svg>';
   const COARSE = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   let root, stick, knob, btns = {}, rotate, active = false, fsTried = false;
   const st = { id: null, ox: 0, oy: 0 };
@@ -61,9 +61,9 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
       if (flip) { b.style.left = right + 'px'; b.style.right = ''; } else { b.style.right = right + 'px'; b.style.left = ''; } if (top != null) { b.style.top = top + 'px'; b.style.bottom = ''; } else { b.style.bottom = bottom + 'px'; b.style.top = ''; }
     };
     const pad = Math.max(14, m * 0.04);
-    const sn = big * 0.62;
-    place(btns.sneak, sn, pad + (big - sn) / 2, pad * 0.6);
-    place(btns.action, big, pad, pad * 0.6 + sn + pad * 0.5);
+    const bb = big * 0.9; // the two thumb buttons are the same size
+    place(btns.sneak, bb, pad, pad * 0.6);
+    place(btns.action, bb, pad, pad * 0.6 + bb + pad * 0.6);
     place(btns.pause, sm, pad, 0, pad);
     place(btns.map, sm, pad + sm * 1.25, 0, pad);
     place(btns.swap, sm, pad, 0, pad + sm * 1.25);
@@ -113,7 +113,7 @@ body,canvas{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
     knob = document.createElement('div'); knob.className = 'knob'; stick.appendChild(knob);
     button('action', 'E', ['action']);
     { // sneak is a toggle: tap on, tap off (the joystick's small push sneaks too)
-      const b = document.createElement('div'); b.className = 'b small sneak'; b.innerHTML = ICON_IVY; root.appendChild(b); btns.sneak = b;
+      const b = document.createElement('div'); b.className = 'b sneak'; b.innerHTML = ICON_IVY; root.appendChild(b); btns.sneak = b;
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); sneakOn = !sneakOn; b.classList.toggle('down', sneakOn); b.innerHTML = sneakOn ? ICON_HOOD : ICON_IVY; });
     }
     { // swap sides

@@ -492,7 +492,7 @@
     _bribe(p) {
       if (!p || p.state === 'hidden') return;
       const asking = this._askTarget();
-      if (!(G.input.pressed('action') || (asking && G.input.pressed('down')))) return;
+      if (!(G.input.pressed('action') || ((asking || this._bribeTarget()) && G.input.pressed('down')))) return;
       const ta = asking || this._bribeTarget();
       if (!ta) return;
       G.inv.candy--; ta.bribed = true; ta.state = 'eat';
